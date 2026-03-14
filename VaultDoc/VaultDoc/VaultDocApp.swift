@@ -3,9 +3,6 @@ import SwiftData
 
 @main
 struct VaultDocApp: App {
-    @AppStorage("supabaseURL") private var supabaseURL = ""
-    @AppStorage("supabaseKey") private var supabaseKey = ""
-
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
@@ -26,8 +23,8 @@ struct VaultDocApp: App {
                 .environment(AppConfigStore.shared)
                 .task {
                     await AppConfigStore.shared.refresh(
-                        supabaseURL: supabaseURL,
-                        supabaseKey: supabaseKey
+                        supabaseURL: Config.Supabase.url,
+                        supabaseKey: Config.Supabase.anonKey
                     )
                 }
         }

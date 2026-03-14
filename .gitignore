@@ -1,0 +1,13 @@
+# Credentials — never commit
+VaultDoc/VaultDoc/Config.swift
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.pbxuser
+
+# macOS
+.DS_Store
