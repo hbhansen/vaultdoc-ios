@@ -115,6 +115,8 @@ struct SettingsView: View {
             }
             .navigationTitle(L10n.tr("settings.title"))
             .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+            .background(BrandTheme.backgroundGradient)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.tr("common.done")) { dismiss() }
@@ -140,6 +142,7 @@ struct SettingsView: View {
                 }
             }
         }
+        .brandBackground()
     }
 
     private func exportAll() {
@@ -155,7 +158,8 @@ struct PrivacyPolicyView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(L10n.tr("settings.privacy_policy"))
-                    .font(.largeTitle).bold()
+                    .font(.system(.largeTitle, design: .serif, weight: .bold))
+                    .foregroundStyle(BrandTheme.textPrimary)
                 Group {
                     Text(L10n.tr("privacy.data_storage"))
                         .font(.headline)
@@ -173,11 +177,12 @@ struct PrivacyPolicyView: View {
                         .font(.headline)
                     Text(L10n.tr("privacy.contact_body"))
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(BrandTheme.textSecondary)
             }
             .padding()
         }
         .navigationTitle(L10n.tr("settings.privacy_policy"))
         .navigationBarTitleDisplayMode(.inline)
+        .brandBackground()
     }
 }

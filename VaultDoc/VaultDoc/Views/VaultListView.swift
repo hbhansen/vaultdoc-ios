@@ -35,12 +35,14 @@ struct VaultListView: View {
                 }
             }
             .navigationTitle(L10n.tr("vault.title"))
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         showSettings = true
                     } label: {
                         Image(systemName: "gearshape")
+                            .foregroundStyle(BrandTheme.accentBright)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -49,6 +51,7 @@ struct VaultListView: View {
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
+                            .foregroundStyle(BrandTheme.accentBright)
                     }
                 }
             }
@@ -67,6 +70,7 @@ struct VaultListView: View {
                 await config.syncDefaultCurrency(userId: auth.userId)
                 await syncFromSupabase()
             }
+            .brandBackground()
         }
     }
 
@@ -138,12 +142,13 @@ struct VaultListView: View {
         VStack(spacing: 20) {
             Image(systemName: "archivebox")
                 .font(.system(size: 72))
-                .foregroundStyle(.teal.opacity(0.6))
+                .foregroundStyle(BrandTheme.accentGradient)
             Text(L10n.tr("vault.empty_title"))
-                .font(.title2).bold()
+                .font(.system(.title2, design: .serif, weight: .bold))
+                .foregroundStyle(BrandTheme.textPrimary)
             Text(L10n.tr("vault.empty_message"))
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(BrandTheme.textSecondary)
                 .multilineTextAlignment(.center)
             Button {
                 showAddItem = true
@@ -152,12 +157,14 @@ struct VaultListView: View {
                     .font(.headline)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .background(Color.teal)
-                    .foregroundStyle(.white)
+                    .background(BrandTheme.accentGradient)
+                    .foregroundStyle(BrandTheme.backgroundBottom)
                     .clipShape(Capsule())
             }
             .padding(.top, 8)
         }
+        .padding()
+        .brandCard()
         .padding()
     }
 
@@ -199,8 +206,10 @@ struct VaultListView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
         .listStyle(.insetGrouped)
         .searchable(text: $viewModel.searchText, prompt: L10n.tr("vault.search_prompt"))
+        .background(Color.clear)
     }
 
     private var summaryHeader: some View {
@@ -228,7 +237,11 @@ struct VaultListView: View {
             )
         }
         .padding(.vertical, 8)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(BrandTheme.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(BrandTheme.border, lineWidth: 1)
+        )
         .cornerRadius(12)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -243,15 +256,16 @@ struct StatCard: View {
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .foregroundStyle(.teal)
+                .foregroundStyle(BrandTheme.accentGradient)
                 .font(.title3)
             Text(value)
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .foregroundStyle(BrandTheme.textPrimary)
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(BrandTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
@@ -273,11 +287,11 @@ struct ItemRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.teal.opacity(0.15))
+                    .fill(BrandTheme.surface)
                     .frame(width: 48, height: 48)
                     .overlay {
                         Image(systemName: item.categoryIcon)
-                            .foregroundStyle(.teal)
+                            .foregroundStyle(BrandTheme.accentGradient)
                     }
             }
 
@@ -289,7 +303,7 @@ struct ItemRow: View {
                     CategoryBadge(category: item.category)
                     Text(CurrencyFormatter.format(item.estimatedValue, for: item, config: config))
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(BrandTheme.textSecondary)
                 }
             }
 
@@ -311,8 +325,8 @@ struct CategoryBadge: View {
             .font(.caption2).bold()
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.teal.opacity(0.15))
-            .foregroundStyle(.teal)
+            .background(BrandTheme.surface)
+            .foregroundStyle(BrandTheme.accentBright)
             .clipShape(Capsule())
     }
 }

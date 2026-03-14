@@ -166,6 +166,8 @@ struct AddItemView: View {
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+            .background(BrandTheme.backgroundGradient)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.tr("common.cancel")) { dismiss() }
@@ -206,6 +208,7 @@ struct AddItemView: View {
                 }
             }
         }
+        .brandBackground()
     }
 
     private func saveItem() async {

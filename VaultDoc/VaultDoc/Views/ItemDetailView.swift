@@ -30,6 +30,7 @@ struct ItemDetailView: View {
         }
         .navigationTitle(item.name)
         .navigationBarTitleDisplayMode(.large)
+        .brandBackground()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(L10n.tr("common.edit")) { showEdit = true }
@@ -84,13 +85,14 @@ struct ItemDetailView: View {
             if item.photos.isEmpty {
                 ZStack {
                     Color.teal.opacity(0.1)
+                        .overlay(BrandTheme.surface)
                     VStack(spacing: 8) {
                         Image(systemName: item.categoryIcon)
                             .font(.system(size: 64))
-                            .foregroundStyle(.teal.opacity(0.5))
+                            .foregroundStyle(BrandTheme.accentGradient)
                         Text(L10n.tr("item_detail.no_photos_yet"))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(BrandTheme.textSecondary)
                     }
                 }
             } else {
@@ -120,7 +122,7 @@ struct ItemDetailView: View {
                     .foregroundStyle(.secondary)
                 Text(CurrencyFormatter.format(item.estimatedValue, for: item, config: config))
                     .font(.title2).bold()
-                    .foregroundStyle(Color(red: 0.031, green: 0.314, blue: 0.255))
+                    .foregroundStyle(BrandTheme.accentBright)
             }
             Spacer()
             Divider().frame(height: 40)
@@ -135,12 +137,12 @@ struct ItemDetailView: View {
                             .controlSize(.small)
                         Text(L10n.tr("item_detail.estimate_coming"))
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(BrandTheme.textSecondary)
                     }
                 } else if let ai = item.aiEstimate {
                     Text(CurrencyFormatter.format(ai, for: item, config: config))
                         .font(.title2).bold()
-                        .foregroundStyle(.teal)
+                        .foregroundStyle(BrandTheme.accentGradient)
                 } else {
                     Button {
                         viewModel.requestAIEstimate(for: item)
@@ -149,8 +151,8 @@ struct ItemDetailView: View {
                             .font(.subheadline)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(Color.teal.opacity(0.15))
-                            .foregroundStyle(.teal)
+                            .background(BrandTheme.surface)
+                            .foregroundStyle(BrandTheme.accentBright)
                             .clipShape(Capsule())
                     }
                 }
@@ -159,8 +161,8 @@ struct ItemDetailView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.teal.opacity(0.08))
-                .stroke(Color.teal.opacity(0.3), lineWidth: 1)
+                .fill(BrandTheme.surface)
+                .stroke(BrandTheme.border, lineWidth: 1)
         )
     }
 
@@ -190,12 +192,13 @@ struct ItemDetailView: View {
                 } label: {
                     Image(systemName: "plus.circle")
                         .foregroundStyle(.teal)
+                        .foregroundStyle(BrandTheme.accentBright)
                 }
             }
             if item.photos.isEmpty {
                 Text(L10n.tr("item_detail.no_photos_attached"))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(BrandTheme.textSecondary)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -215,11 +218,11 @@ struct ItemDetailView: View {
                             showCamera = true
                         } label: {
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.teal.opacity(0.1))
+                                .fill(BrandTheme.surface)
                                 .frame(width: 72, height: 72)
                                 .overlay {
                                     Image(systemName: "plus")
-                                        .foregroundStyle(.teal)
+                                        .foregroundStyle(BrandTheme.accentBright)
                                         .font(.title2)
                                 }
                         }
@@ -228,7 +231,8 @@ struct ItemDetailView: View {
             }
         }
         .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        .background(RoundedRectangle(cornerRadius: 16).fill(BrandTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(BrandTheme.border, lineWidth: 1))
     }
 
     // MARK: - Documents
@@ -246,27 +250,27 @@ struct ItemDetailView: View {
                         .font(.subheadline)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Color.teal)
-                        .foregroundStyle(.white)
+                        .background(BrandTheme.accentGradient)
+                        .foregroundStyle(BrandTheme.backgroundBottom)
                         .clipShape(Capsule())
                 }
             }
             if item.documents.isEmpty {
                 Text(L10n.tr("item_detail.no_documents_attached"))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(BrandTheme.textSecondary)
             } else {
                 ForEach(item.documents) { doc in
                     HStack {
                         Image(systemName: "doc.fill")
-                            .foregroundStyle(.teal)
+                            .foregroundStyle(BrandTheme.accentBright)
                         VStack(alignment: .leading) {
                             Text(doc.filename)
                                 .font(.subheadline)
                                 .lineLimit(1)
                             Text(doc.formattedSize)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(BrandTheme.textSecondary)
                         }
                         Spacer()
                     }
@@ -276,7 +280,8 @@ struct ItemDetailView: View {
             }
         }
         .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+        .background(RoundedRectangle(cornerRadius: 16).fill(BrandTheme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(BrandTheme.border, lineWidth: 1))
     }
 }
 
@@ -288,20 +293,21 @@ struct InfoCell: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .foregroundStyle(.teal)
+                .foregroundStyle(BrandTheme.accentBright)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(BrandTheme.textSecondary)
                 Text(value)
                     .font(.subheadline)
                     .lineLimit(1)
+                    .foregroundStyle(BrandTheme.textPrimary)
             }
             Spacer()
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
+        .background(RoundedRectangle(cornerRadius: 10).fill(BrandTheme.elevatedSurface))
     }
 }
 
