@@ -5,6 +5,7 @@ struct VaultListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppConfigStore.self) private var config
     @Environment(AuthService.self) private var auth
+    @Environment(LanguageSettings.self) private var language
     @Query private var items: [Item]
     @State private var viewModel = VaultViewModel()
     @State private var showAddItem = false
@@ -33,7 +34,7 @@ struct VaultListView: View {
                     listContent
                 }
             }
-            .navigationTitle("My Vault")
+            .navigationTitle(L10n.tr("vault.title"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -57,8 +58,8 @@ struct VaultListView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView(items: items)
             }
-            .alert("Delete Error", isPresented: .constant(deleteError != nil)) {
-                Button("OK") { deleteError = nil }
+            .alert(L10n.tr("vault.delete_error"), isPresented: .constant(deleteError != nil)) {
+                Button(L10n.tr("common.ok")) { deleteError = nil }
             } message: {
                 Text(deleteError ?? "")
             }
@@ -138,16 +139,16 @@ struct VaultListView: View {
             Image(systemName: "archivebox")
                 .font(.system(size: 72))
                 .foregroundStyle(.teal.opacity(0.6))
-            Text("Your vault is empty")
+            Text(L10n.tr("vault.empty_title"))
                 .font(.title2).bold()
-            Text("Add your first item to start building\nyour insurance documentation.")
+            Text(L10n.tr("vault.empty_message"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button {
                 showAddItem = true
             } label: {
-                Label("Add Your First Item", systemImage: "plus")
+                Label(L10n.tr("vault.add_first_item"), systemImage: "plus")
                     .font(.headline)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
@@ -199,25 +200,25 @@ struct VaultListView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .searchable(text: $viewModel.searchText, prompt: "Search items")
+        .searchable(text: $viewModel.searchText, prompt: L10n.tr("vault.search_prompt"))
     }
 
     private var summaryHeader: some View {
         HStack(spacing: 0) {
             StatCard(
-                title: "Items",
+                title: L10n.tr("vault.stat.items"),
                 value: "\(items.count)",
                 icon: "archivebox.fill"
             )
             Divider().frame(height: 50)
             StatCard(
-                title: "Total Value",
+                title: L10n.tr("vault.stat.total_value"),
                 value: CurrencyFormatter.format(viewModel.totalDeclaredValue(items)),
                 icon: "eurosign.circle.fill"
             )
             Divider().frame(height: 50)
             StatCard(
-                title: "Documented",
+                title: L10n.tr("vault.stat.documented"),
                 value: "\(viewModel.documentedCount(items))/\(items.count)",
                 icon: "checkmark.seal.fill"
             )
@@ -300,7 +301,7 @@ struct CategoryBadge: View {
     let category: String
 
     var body: some View {
-        Text(category.prefix(1).uppercased() + category.dropFirst())
+        Text(L10n.categoryName(category))
             .font(.caption2).bold()
             .padding(.horizontal, 6)
             .padding(.vertical, 2)

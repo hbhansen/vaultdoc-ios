@@ -43,7 +43,7 @@ struct RemoteCurrency: Codable, Identifiable, Hashable {
 
 enum RemoteConfigError: LocalizedError {
     case badResponse
-    var errorDescription: String? { "Failed to load config from Supabase." }
+    var errorDescription: String? { L10n.tr("config.error.load_failed") }
 }
 
 // SQL to run in Supabase SQL Editor to create the tables:

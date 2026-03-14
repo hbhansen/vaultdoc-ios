@@ -57,7 +57,7 @@ final class Item {
     }
 
     var categoryDisplayName: String {
-        category.prefix(1).uppercased() + category.dropFirst()
+        L10n.categoryName(category)
     }
 
     var categoryIcon: String {
@@ -108,10 +108,6 @@ final class ItemDocument {
     }
 
     var formattedSize: String {
-        let kb = Double(fileSize) / 1024
-        if kb < 1024 {
-            return String(format: "%.1f KB", kb)
-        }
-        return String(format: "%.1f MB", kb / 1024)
+        ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file)
     }
 }

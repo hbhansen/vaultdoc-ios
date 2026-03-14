@@ -3,6 +3,7 @@ import SwiftData
 
 @main
 struct VaultDocApp: App {
+    @State private var languageSettings = LanguageSettings.shared
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([Item.self, ItemPhoto.self, ItemDocument.self])
@@ -34,6 +35,8 @@ struct VaultDocApp: App {
             }
             .environment(AppConfigStore.shared)
             .environment(AuthService.shared)
+            .environment(languageSettings)
+            .environment(\.locale, languageSettings.locale)
             .task {
                 await AuthService.shared.restoreSession()
                 await AppConfigStore.shared.refresh(

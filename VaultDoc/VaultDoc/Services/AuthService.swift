@@ -132,10 +132,10 @@ class AuthService {
                 throw AuthError.serverError(
                     errorResponse.errorDescription
                     ?? errorResponse.msg
-                    ?? "Unknown error (HTTP \(http.statusCode))"
+                    ?? L10n.format("auth.error.unknown_http", Int64(http.statusCode))
                 )
             }
-            throw AuthError.serverError("HTTP \(http.statusCode)")
+            throw AuthError.serverError(L10n.format("auth.error.http_status", Int64(http.statusCode)))
         }
 
         let decoder = JSONDecoder()
@@ -169,7 +169,7 @@ enum AuthError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .networkError: return "Network request failed."
+        case .networkError: return L10n.tr("auth.error.network_request_failed")
         case .serverError(let msg): return msg
         }
     }

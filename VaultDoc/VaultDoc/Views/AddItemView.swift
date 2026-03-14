@@ -8,6 +8,7 @@ struct AddItemView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppConfigStore.self) private var config
     @Environment(AuthService.self) private var auth
+    @Environment(LanguageSettings.self) private var language
 
     var existingItem: Item? = nil
 
@@ -30,7 +31,7 @@ struct AddItemView: View {
     @State private var saveError: String?
 
     var isEditing: Bool { existingItem != nil }
-    var title: String { isEditing ? "Edit Item" : "Add Item" }
+    var title: String { isEditing ? L10n.tr("add_item.edit_title") : L10n.tr("add_item.add_title") }
 
     var selectedCurrency: RemoteCurrency? {
         config.currency(code: currency)
@@ -39,22 +40,22 @@ struct AddItemView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Item Details") {
-                    TextField("Name", text: $name)
+                Section(L10n.tr("add_item.section.details")) {
+                    TextField(L10n.tr("item.field.name"), text: $name)
 
-                    Picker("Category", selection: $category) {
+                    Picker(L10n.tr("item.field.category"), selection: $category) {
                         ForEach(config.categories) { cat in
                             HStack {
                                 Image(systemName: cat.icon ?? "archivebox")
-                                Text(cat.displayName)
+                                Text(L10n.categoryName(cat.name, fallback: cat.displayName))
                             }
                             .tag(cat.name)
                         }
                     }
 
-                    Picker("Currency", selection: $currency) {
+                    Picker(L10n.tr("item.field.currency"), selection: $currency) {
                         ForEach(config.currencies) { cur in
-                            Text("\(cur.symbol)  \(cur.code) — \(cur.name)").tag(cur.code)
+                            Text("\(cur.symbol)  \(cur.code) — \(L10n.currencyName(code: cur.code, fallback: cur.name))").tag(cur.code)
                         }
                     }
 
@@ -62,7 +63,7 @@ struct AddItemView: View {
                         Text(selectedCurrency?.symbol ?? "€")
                             .foregroundStyle(.secondary)
                             .frame(width: 24)
-                        TextField("Purchase Price", text: $purchasePrice)
+                        TextField(L10n.tr("item.field.purchase_price"), text: $purchasePrice)
                             .keyboardType(.decimalPad)
                     }
 
@@ -70,28 +71,28 @@ struct AddItemView: View {
                         Text(selectedCurrency?.symbol ?? "€")
                             .foregroundStyle(.secondary)
                             .frame(width: 24)
-                        TextField("Declared Value", text: $estimatedValue)
+                        TextField(L10n.tr("item.field.declared_value"), text: $estimatedValue)
                             .keyboardType(.decimalPad)
                     }
 
-                    Stepper("Year: \(String(yearPurchased))", value: $yearPurchased,
+                    Stepper(L10n.format("item.field.year_format", Int64(yearPurchased)), value: $yearPurchased,
                             in: 1900...Calendar.current.component(.year, from: Date()))
-                    TextField("Serial Number", text: $serialNumber)
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    TextField(L10n.tr("item.field.serial_number"), text: $serialNumber)
+                    TextField(L10n.tr("item.field.notes"), text: $notes, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
                 }
 
-                Section("Photos") {
+                Section(L10n.tr("item_detail.photos")) {
                     HStack {
                         Button {
                             showCamera = true
                         } label: {
-                            Label("Camera", systemImage: "camera")
+                            Label(L10n.tr("add_item.camera"), systemImage: "camera")
                         }
                         Spacer()
                         PhotosPicker(selection: $photoItems, maxSelectionCount: 10,
                                      matching: .images) {
-                            Label("Library", systemImage: "photo.on.rectangle")
+                            Label(L10n.tr("add_item.library"), systemImage: "photo.on.rectangle")
                         }
                     }
                     if !capturedImages.isEmpty {
@@ -130,11 +131,11 @@ struct AddItemView: View {
                     }
                 }
 
-                Section("Documents") {
+                Section(L10n.tr("item_detail.documents")) {
                     Button {
                         showDocumentPicker = true
                     } label: {
-                        Label("Attach Document", systemImage: "doc.badge.plus")
+                        Label(L10n.tr("add_item.attach_document"), systemImage: "doc.badge.plus")
                     }
                     ForEach(attachedDocuments, id: \.filename) { doc in
                         HStack {
@@ -167,10 +168,10 @@ struct AddItemView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.tr("common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isEditing ? "Save" : "Add") {
+                    Button(isEditing ? L10n.tr("common.save") : L10n.tr("common.add")) {
                         Task { await saveItem() }
                     }
                     .disabled(name.isEmpty || isSaving)

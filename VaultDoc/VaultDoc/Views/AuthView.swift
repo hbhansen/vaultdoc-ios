@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AuthView: View {
     @Environment(AuthService.self) private var auth
+    @Environment(LanguageSettings.self) private var language
 
     @State private var email = ""
     @State private var password = ""
@@ -15,9 +16,9 @@ struct AuthView: View {
                     Image(systemName: "archivebox.fill")
                         .font(.system(size: 64))
                         .foregroundStyle(.teal)
-                    Text("VaultDoc")
+                    Text(L10n.tr("app.name"))
                         .font(.largeTitle).bold()
-                    Text("Secure your valuables documentation")
+                    Text(L10n.tr("auth.subtitle"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -25,7 +26,7 @@ struct AuthView: View {
 
                 // Form fields
                 VStack(spacing: 16) {
-                    TextField("Email", text: $email)
+                    TextField(L10n.tr("auth.email"), text: $email)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
@@ -34,7 +35,7 @@ struct AuthView: View {
                         .background(Color(.secondarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
 
-                    SecureField("Password", text: $password)
+                    SecureField(L10n.tr("auth.password"), text: $password)
                         .textContentType(isSignUp ? .newPassword : .password)
                         .padding()
                         .background(Color(.secondarySystemBackground))
@@ -66,7 +67,7 @@ struct AuthView: View {
                             ProgressView()
                                 .tint(.white)
                         } else {
-                            Text(isSignUp ? "Create Account" : "Sign In")
+                            Text(isSignUp ? L10n.tr("auth.create_account") : L10n.tr("auth.sign_in"))
                                 .font(.headline)
                         }
                     }
@@ -85,8 +86,8 @@ struct AuthView: View {
                     auth.errorMessage = nil
                 } label: {
                     Text(isSignUp
-                        ? "Already have an account? Sign In"
-                        : "Don't have an account? Sign Up")
+                        ? L10n.tr("auth.toggle.sign_in")
+                        : L10n.tr("auth.toggle.sign_up"))
                         .font(.subheadline)
                         .foregroundStyle(.teal)
                 }

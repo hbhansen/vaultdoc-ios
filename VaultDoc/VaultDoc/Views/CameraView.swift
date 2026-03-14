@@ -4,6 +4,7 @@ import AVFoundation
 struct CameraView: View {
     var onCapture: (Data) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(LanguageSettings.self) private var language
     @State private var viewModel = CameraViewModel()
 
     var body: some View {
@@ -94,10 +95,10 @@ struct CameraView: View {
             Image(systemName: "camera.slash")
                 .font(.system(size: 64))
                 .foregroundStyle(.white.opacity(0.6))
-            Text("Camera Access Required")
+            Text(L10n.tr("camera.permission_required"))
                 .font(.title2).bold()
                 .foregroundStyle(.white)
-            Text("Please enable camera access in Settings to photograph your valuables.")
+            Text(L10n.tr("camera.permission_message"))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white.opacity(0.7))
                 .padding(.horizontal)
@@ -106,14 +107,14 @@ struct CameraView: View {
                     UIApplication.shared.open(url)
                 }
             } label: {
-                Text("Open Settings")
+                Text(L10n.tr("camera.open_settings"))
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(Color.teal)
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
             }
-            Button("Cancel") { dismiss() }
+            Button(L10n.tr("common.cancel")) { dismiss() }
                 .foregroundStyle(.white.opacity(0.7))
         }
     }

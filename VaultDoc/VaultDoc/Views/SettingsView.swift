@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppConfigStore.self) private var config
     @Environment(AuthService.self) private var auth
+    @Environment(LanguageSettings.self) private var language
 
     @State private var showShareSheet = false
     @State private var pdfData: Data?
@@ -20,7 +21,7 @@ struct SettingsView: View {
                             .font(.title)
                             .foregroundStyle(.teal)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Signed in as")
+                            Text(L10n.tr("settings.signed_in_as"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Text(auth.userEmail)
@@ -32,20 +33,20 @@ struct SettingsView: View {
                             await auth.signOut()
                         }
                     } label: {
-                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        Label(L10n.tr("settings.sign_out"), systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 } header: {
-                    Text("Account")
+                    Text(L10n.tr("settings.account"))
                 }
 
                 // MARK: Current config
-                Section("Active Categories (\(config.categories.count))") {
+                Section(L10n.format("settings.active_categories_count", Int64(config.categories.count))) {
                     ForEach(config.categories) { cat in
                         HStack {
                             Image(systemName: cat.icon ?? "archivebox")
                                 .foregroundStyle(.teal)
                                 .frame(width: 24)
-                            Text(cat.displayName)
+                            Text(L10n.categoryName(cat.name, fallback: cat.displayName))
                             Spacer()
                             Text(cat.name)
                                 .font(.caption)
@@ -54,10 +55,10 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Active Currencies (\(config.currencies.count))") {
-                    Picker("Default Currency", selection: $defaultCurrencyCode) {
+                Section(L10n.format("settings.active_currencies_count", Int64(config.currencies.count))) {
+                    Picker(L10n.tr("settings.default_currency"), selection: $defaultCurrencyCode) {
                         ForEach(config.currencies) { cur in
-                            Text("\(cur.symbol)  \(cur.code) — \(cur.name)").tag(cur.code)
+                            Text("\(cur.symbol)  \(cur.code) — \(L10n.currencyName(code: cur.code, fallback: cur.name))").tag(cur.code)
                         }
                     }
 
@@ -67,7 +68,7 @@ struct SettingsView: View {
                                 .font(.headline)
                                 .foregroundStyle(.teal)
                                 .frame(width: 32)
-                            Text(cur.name)
+                            Text(L10n.currencyName(code: cur.code, fallback: cur.name))
                             Spacer()
                             Text(cur.code)
                                 .font(.caption)
@@ -76,38 +77,47 @@ struct SettingsView: View {
                     }
                 }
 
+                Section(L10n.tr("settings.language")) {
+                    Picker(L10n.tr("settings.app_language"), selection: Bindable(language).selectedLanguage) {
+                        ForEach(LanguageSettings.AppLanguage.allCases) { appLanguage in
+                            Text(appLanguage.localizedName)
+                                .tag(appLanguage)
+                        }
+                    }
+                }
+
                 // MARK: Export
-                Section("Export") {
+                Section(L10n.tr("settings.export")) {
                     Button {
                         exportAll()
                     } label: {
-                        Label("Export All Items as PDF", systemImage: "arrow.up.doc.fill")
+                        Label(L10n.tr("settings.export_all_items_pdf"), systemImage: "arrow.up.doc.fill")
                     }
                     .disabled(items.isEmpty)
                 }
 
                 // MARK: About
-                Section("About") {
+                Section(L10n.tr("settings.about")) {
                     HStack {
-                        Text("Version")
+                        Text(L10n.tr("settings.version"))
                         Spacer()
                         Text("1.0.0").foregroundStyle(.secondary)
                     }
                     HStack {
-                        Text("Build")
+                        Text(L10n.tr("settings.build"))
                         Spacer()
                         Text("1").foregroundStyle(.secondary)
                     }
-                    NavigationLink("Privacy Policy") {
+                    NavigationLink(L10n.tr("settings.privacy_policy")) {
                         PrivacyPolicyView()
                     }
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle(L10n.tr("settings.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.tr("common.done")) { dismiss() }
                 }
             }
             .sheet(isPresented: $showShareSheet) {
@@ -139,33 +149,35 @@ struct SettingsView: View {
 }
 
 struct PrivacyPolicyView: View {
+    @Environment(LanguageSettings.self) private var language
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Privacy Policy")
+                Text(L10n.tr("settings.privacy_policy"))
                     .font(.largeTitle).bold()
                 Group {
-                    Text("Data Storage")
+                    Text(L10n.tr("privacy.data_storage"))
                         .font(.headline)
-                    Text("VaultDoc stores all your data locally on your device using SwiftData. No data is sent to external servers except when you request an AI estimate, which sends item details to the Anthropic API.")
+                    Text(L10n.tr("privacy.data_storage_body"))
 
-                    Text("Camera & Photos")
+                    Text(L10n.tr("privacy.camera_photos"))
                         .font(.headline)
-                    Text("VaultDoc accesses your camera and photo library only to capture and attach photos to your items. Photos are stored locally on your device.")
+                    Text(L10n.tr("privacy.camera_photos_body"))
 
-                    Text("AI Estimates")
+                    Text(L10n.tr("privacy.ai_estimates"))
                         .font(.headline)
-                    Text("VaultDoc sends item details to the Anthropic API when you request an AI estimate. The API key is managed in app configuration, not by end users in Settings.")
+                    Text(L10n.tr("privacy.ai_estimates_body"))
 
-                    Text("Contact")
+                    Text(L10n.tr("privacy.contact"))
                         .font(.headline)
-                    Text("For privacy inquiries, please contact us through the App Store listing.")
+                    Text(L10n.tr("privacy.contact_body"))
                 }
                 .foregroundStyle(.secondary)
             }
             .padding()
         }
-        .navigationTitle("Privacy Policy")
+        .navigationTitle(L10n.tr("settings.privacy_policy"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

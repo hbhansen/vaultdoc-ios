@@ -6,6 +6,7 @@ struct ItemDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppConfigStore.self) private var config
     @Environment(AuthService.self) private var auth
+    @Environment(LanguageSettings.self) private var language
     @State private var viewModel = ItemDetailViewModel()
     @State private var showEdit = false
     @State private var showCamera = false
@@ -31,7 +32,7 @@ struct ItemDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Edit") { showEdit = true }
+                Button(L10n.tr("common.edit")) { showEdit = true }
             }
         }
         .sheet(isPresented: $showEdit) {
@@ -64,13 +65,13 @@ struct ItemDetailView: View {
                 }
             }
         }
-        .alert("Estimate Error", isPresented: .constant(viewModel.estimateError != nil)) {
-            Button("OK") { viewModel.estimateError = nil }
+        .alert(L10n.tr("item_detail.estimate_error"), isPresented: .constant(viewModel.estimateError != nil)) {
+            Button(L10n.tr("common.ok")) { viewModel.estimateError = nil }
         } message: {
             Text(viewModel.estimateError ?? "")
         }
-        .alert("Upload Error", isPresented: .constant(photoUploadError != nil)) {
-            Button("OK") { photoUploadError = nil }
+        .alert(L10n.tr("item_detail.upload_error"), isPresented: .constant(photoUploadError != nil)) {
+            Button(L10n.tr("common.ok")) { photoUploadError = nil }
         } message: {
             Text(photoUploadError ?? "")
         }
@@ -87,7 +88,7 @@ struct ItemDetailView: View {
                         Image(systemName: item.categoryIcon)
                             .font(.system(size: 64))
                             .foregroundStyle(.teal.opacity(0.5))
-                        Text("No photos yet")
+                        Text(L10n.tr("item_detail.no_photos_yet"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -114,7 +115,7 @@ struct ItemDetailView: View {
     private var valueCard: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("DECLARED VALUE")
+                Text(L10n.tr("item_detail.declared_value_uppercase"))
                     .font(.caption2).bold()
                     .foregroundStyle(.secondary)
                 Text(CurrencyFormatter.format(item.estimatedValue, for: item, config: config))
@@ -125,7 +126,7 @@ struct ItemDetailView: View {
             Divider().frame(height: 40)
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
-                Text("AI ESTIMATE")
+                Text(L10n.tr("item_detail.ai_estimate_uppercase"))
                     .font(.caption2).bold()
                     .foregroundStyle(.secondary)
                 if viewModel.isRequestingEstimate {
@@ -138,7 +139,7 @@ struct ItemDetailView: View {
                     Button {
                         viewModel.requestAIEstimate(for: item)
                     } label: {
-                        Text("Get Estimate")
+                        Text(L10n.tr("item_detail.get_estimate"))
                             .font(.subheadline)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -161,11 +162,11 @@ struct ItemDetailView: View {
 
     private var infoGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            InfoCell(label: "Category", value: item.categoryDisplayName, icon: item.categoryIcon)
-            InfoCell(label: "Year", value: String(item.yearPurchased), icon: "calendar")
-            InfoCell(label: "Purchase Price", value: CurrencyFormatter.format(item.purchasePrice, for: item, config: config), icon: "eurosign")
-            InfoCell(label: "Serial Number",
-                     value: item.serialNumber.isEmpty ? "—" : item.serialNumber,
+            InfoCell(label: L10n.tr("item.field.category"), value: item.categoryDisplayName, icon: item.categoryIcon)
+            InfoCell(label: L10n.tr("item.field.year"), value: String(item.yearPurchased), icon: "calendar")
+            InfoCell(label: L10n.tr("item.field.purchase_price"), value: CurrencyFormatter.format(item.purchasePrice, for: item, config: config), icon: "eurosign")
+            InfoCell(label: L10n.tr("item.field.serial_number"),
+                     value: item.serialNumber.isEmpty ? L10n.placeholderDash : item.serialNumber,
                      icon: "number")
         }
     }
@@ -175,7 +176,7 @@ struct ItemDetailView: View {
     private var photoStrip: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Photos")
+                Text(L10n.tr("item_detail.photos"))
                     .font(.headline)
                 Spacer()
                 Button {
@@ -186,7 +187,7 @@ struct ItemDetailView: View {
                 }
             }
             if item.photos.isEmpty {
-                Text("No photos attached")
+                Text(L10n.tr("item_detail.no_photos_attached"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
@@ -229,13 +230,13 @@ struct ItemDetailView: View {
     private var documentsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Documents")
+                Text(L10n.tr("item_detail.documents"))
                     .font(.headline)
                 Spacer()
                 Button {
                     viewModel.generatePDF(for: item)
                 } label: {
-                    Label("Export PDF", systemImage: "arrow.up.doc")
+                    Label(L10n.tr("item_detail.export_pdf"), systemImage: "arrow.up.doc")
                         .font(.subheadline)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -245,7 +246,7 @@ struct ItemDetailView: View {
                 }
             }
             if item.documents.isEmpty {
-                Text("No documents attached")
+                Text(L10n.tr("item_detail.no_documents_attached"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {

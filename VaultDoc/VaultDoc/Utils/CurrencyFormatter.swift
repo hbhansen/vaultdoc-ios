@@ -5,6 +5,7 @@ struct CurrencyFormatter {
     static func format(_ value: Double, code: String = "EUR", symbol: String? = nil) -> String {
         let f = NumberFormatter()
         f.numberStyle = .currency
+        f.locale = LanguageSettings.shared.locale
         f.currencyCode = code
         if let symbol { f.currencySymbol = symbol }
         f.maximumFractionDigits = 2
