@@ -10,90 +10,94 @@ struct AuthView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 32) {
-                // Branding header
-                VStack(spacing: 8) {
-                    Image(systemName: "archivebox.fill")
-                        .font(.system(size: 64))
-                        .foregroundStyle(.teal)
-                    Text(L10n.tr("app.name"))
-                        .font(.largeTitle).bold()
-                    Text(L10n.tr("auth.subtitle"))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 40)
+            ScrollView {
+                VStack(spacing: 30) {
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(BrandTheme.accent.opacity(0.16))
+                                .frame(width: 104, height: 104)
+                            Circle()
+                                .stroke(BrandTheme.border, lineWidth: 1)
+                                .frame(width: 116, height: 116)
+                            Image(systemName: "archivebox.fill")
+                                .font(.system(size: 42, weight: .semibold))
+                                .foregroundStyle(BrandTheme.accentGradient)
+                        }
+                        Text(L10n.tr("app.name"))
+                            .font(.system(.largeTitle, design: .serif, weight: .bold))
+                            .foregroundStyle(BrandTheme.textPrimary)
+                        Text(L10n.tr("auth.subtitle"))
+                            .font(.subheadline)
+                            .foregroundStyle(BrandTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 36)
 
-                // Form fields
-                VStack(spacing: 16) {
-                    TextField(L10n.tr("auth.email"), text: $email)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    VStack(spacing: 16) {
+                        TextField(L10n.tr("auth.email"), text: $email)
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            .brandInputField()
 
-                    SecureField(L10n.tr("auth.password"), text: $password)
-                        .textContentType(isSignUp ? .newPassword : .password)
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .padding(.horizontal)
+                        SecureField(L10n.tr("auth.password"), text: $password)
+                            .textContentType(isSignUp ? .newPassword : .password)
+                            .brandInputField()
 
-                // Error message
-                if let error = auth.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
+                        if let error = auth.errorMessage {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(BrandTheme.alert)
+                                .multilineTextAlignment(.center)
+                        }
 
-                // Primary action button
-                Button {
-                    Task {
-                        if isSignUp {
-                            await auth.signUp(email: email, password: password)
-                        } else {
-                            await auth.signIn(email: email, password: password)
+                        Button {
+                            Task {
+                                if isSignUp {
+                                    await auth.signUp(email: email, password: password)
+                                } else {
+                                    await auth.signIn(email: email, password: password)
+                                }
+                            }
+                        } label: {
+                            Group {
+                                if auth.isLoading {
+                                    ProgressView()
+                                        .tint(BrandTheme.backgroundBottom)
+                                } else {
+                                    Text(isSignUp ? L10n.tr("auth.create_account") : L10n.tr("auth.sign_in"))
+                                        .font(.headline)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(BrandTheme.accentGradient)
+                            .foregroundStyle(BrandTheme.backgroundBottom)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        }
+                        .disabled(email.isEmpty || password.isEmpty || auth.isLoading)
+
+                        Button {
+                            isSignUp.toggle()
+                            auth.errorMessage = nil
+                        } label: {
+                            Text(isSignUp
+                                ? L10n.tr("auth.toggle.sign_in")
+                                : L10n.tr("auth.toggle.sign_up"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(BrandTheme.accentBright)
                         }
                     }
-                } label: {
-                    Group {
-                        if auth.isLoading {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Text(isSignUp ? L10n.tr("auth.create_account") : L10n.tr("auth.sign_in"))
-                                .font(.headline)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.teal)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(email.isEmpty || password.isEmpty || auth.isLoading)
-                .padding(.horizontal)
+                    .padding(24)
+                    .brandCard()
+                    .padding(.horizontal, 20)
 
-                // Toggle sign in / sign up
-                Button {
-                    isSignUp.toggle()
-                    auth.errorMessage = nil
-                } label: {
-                    Text(isSignUp
-                        ? L10n.tr("auth.toggle.sign_in")
-                        : L10n.tr("auth.toggle.sign_up"))
-                        .font(.subheadline)
-                        .foregroundStyle(.teal)
+                    Spacer(minLength: 28)
                 }
-
-                Spacer()
             }
+            .brandBackground()
         }
     }
 }

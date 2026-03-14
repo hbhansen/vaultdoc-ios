@@ -9,7 +9,7 @@ struct CameraView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            BrandTheme.backgroundGradient.ignoresSafeArea()
 
             if viewModel.permissionDenied {
                 permissionDeniedView
@@ -25,9 +25,9 @@ struct CameraView: View {
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.title2)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(BrandTheme.textPrimary)
                                 .padding(12)
-                                .background(Circle().fill(Color.black.opacity(0.5)))
+                                .background(Circle().fill(BrandTheme.surface))
                         }
                         .padding()
                         Spacer()
@@ -36,9 +36,9 @@ struct CameraView: View {
                         } label: {
                             Image(systemName: viewModel.isFlashOn ? "bolt.fill" : "bolt.slash")
                                 .font(.title2)
-                                .foregroundStyle(viewModel.isFlashOn ? .yellow : .white)
+                                .foregroundStyle(viewModel.isFlashOn ? BrandTheme.accentBright : BrandTheme.textPrimary)
                                 .padding(12)
-                                .background(Circle().fill(Color.black.opacity(0.5)))
+                                .background(Circle().fill(BrandTheme.surface))
                         }
                         .padding()
                     }
@@ -53,10 +53,10 @@ struct CameraView: View {
                         } label: {
                             ZStack {
                                 Circle()
-                                    .fill(.white)
+                                    .fill(BrandTheme.accentGradient)
                                     .frame(width: 72, height: 72)
                                 Circle()
-                                    .stroke(.white.opacity(0.5), lineWidth: 3)
+                                    .stroke(BrandTheme.border, lineWidth: 3)
                                     .frame(width: 84, height: 84)
                             }
                         }
@@ -66,9 +66,9 @@ struct CameraView: View {
                         } label: {
                             Image(systemName: "arrow.triangle.2.circlepath.camera")
                                 .font(.title)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(BrandTheme.textPrimary)
                                 .padding(12)
-                                .background(Circle().fill(Color.black.opacity(0.5)))
+                                .background(Circle().fill(BrandTheme.surface))
                         }
                     }
                     .padding(.horizontal, 32)
@@ -94,13 +94,13 @@ struct CameraView: View {
         VStack(spacing: 20) {
             Image(systemName: "camera.slash")
                 .font(.system(size: 64))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(BrandTheme.textSecondary)
             Text(L10n.tr("camera.permission_required"))
                 .font(.title2).bold()
-                .foregroundStyle(.white)
+                .foregroundStyle(BrandTheme.textPrimary)
             Text(L10n.tr("camera.permission_message"))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(BrandTheme.textSecondary)
                 .padding(.horizontal)
             Button {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -110,12 +110,12 @@ struct CameraView: View {
                 Text(L10n.tr("camera.open_settings"))
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .background(Color.teal)
-                    .foregroundStyle(.white)
+                    .background(BrandTheme.accentGradient)
+                    .foregroundStyle(BrandTheme.backgroundBottom)
                     .clipShape(Capsule())
             }
             Button(L10n.tr("common.cancel")) { dismiss() }
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(BrandTheme.textSecondary)
         }
     }
 }

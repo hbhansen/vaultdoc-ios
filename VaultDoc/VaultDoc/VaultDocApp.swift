@@ -38,6 +38,7 @@ struct VaultDocApp: App {
             .environment(AuthService.shared)
             .environment(languageSettings)
             .environment(\.locale, languageSettings.locale)
+            .tint(BrandTheme.accent)
             .task {
                 await AuthService.shared.restoreSession()
                 await AppConfigStore.shared.refresh(
