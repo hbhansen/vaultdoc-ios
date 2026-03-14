@@ -6,6 +6,7 @@ final class Item {
     var id: UUID
     var name: String
     var category: String
+    var currency: String
     var purchasePrice: Double
     var estimatedValue: Double
     var aiEstimate: Double?
@@ -24,6 +25,7 @@ final class Item {
         id: UUID = UUID(),
         name: String,
         category: String = "other",
+        currency: String = "EUR",
         purchasePrice: Double = 0,
         estimatedValue: Double = 0,
         aiEstimate: Double? = nil,
@@ -35,6 +37,7 @@ final class Item {
         self.id = id
         self.name = name
         self.category = category
+        self.currency = currency
         self.purchasePrice = purchasePrice
         self.estimatedValue = estimatedValue
         self.aiEstimate = aiEstimate
@@ -50,22 +53,18 @@ final class Item {
         !photos.isEmpty && !documents.isEmpty
     }
 
-    static let categories = [
-        "jewellery", "art", "electronics", "furniture", "collectibles", "other"
-    ]
-
     var categoryDisplayName: String {
         category.prefix(1).uppercased() + category.dropFirst()
     }
 
     var categoryIcon: String {
         switch category {
-        case "jewellery": return "sparkles"
-        case "art": return "paintpalette"
+        case "jewellery":   return "sparkles"
+        case "art":         return "paintpalette"
         case "electronics": return "desktopcomputer"
-        case "furniture": return "sofa"
-        case "collectibles": return "star"
-        default: return "archivebox"
+        case "furniture":   return "sofa"
+        case "collectibles":return "star"
+        default:            return "archivebox"
         }
     }
 }

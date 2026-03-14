@@ -3,6 +3,7 @@ import SwiftData
 
 struct VaultListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppConfigStore.self) private var config
     @Query(sort: \Item.createdAt, order: .reverse) private var items: [Item]
     @State private var viewModel = VaultViewModel()
     @State private var showAddItem = false

@@ -3,14 +3,21 @@ import SwiftUI
 struct SettingsView: View {
     let items: [Item]
     @Environment(\.dismiss) private var dismiss
-    @State private var apiKey: String = ""
+    @Environment(AppConfigStore.self) private var config
+
+    @AppStorage("supabaseURL") private var supabaseURL = ""
+    @AppStorage("supabaseKey") private var supabaseKey = ""
+
+    @State private var apiKey = ""
     @State private var isAPIKeyVisible = false
+    @State private var isSupabaseKeyVisible = false
     @State private var showShareSheet = false
     @State private var pdfData: Data?
 
     var body: some View {
         NavigationStack {
             Form {
+                // MARK: Anthropic
                 Section {
                     HStack {
                         if isAPIKeyVisible {
@@ -34,9 +41,91 @@ struct SettingsView: View {
                 } header: {
                     Text("Anthropic API Key")
                 } footer: {
-                    Text("Required for AI value estimates. Your key is stored securely in the device keychain.")
+                    Text("Required for AI value estimates. Stored securely in the device keychain.")
                 }
 
+                // MARK: Supabase
+                Section {
+                    TextField("https://xxxx.supabase.co", text: $supabaseURL)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.URL)
+
+                    HStack {
+                        if isSupabaseKeyVisible {
+                            TextField("eyJ...", text: $supabaseKey)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                        } else {
+                            SecureField("eyJ...", text: $supabaseKey)
+                        }
+                        Button {
+                            isSupabaseKeyVisible.toggle()
+                        } label: {
+                            Image(systemName: isSupabaseKeyVisible ? "eye.slash" : "eye")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Button {
+                        Task {
+                            await config.refresh(supabaseURL: supabaseURL, supabaseKey: supabaseKey)
+                        }
+                    } label: {
+                        HStack {
+                            Label("Sync Categories & Currencies", systemImage: "arrow.triangle.2.circlepath")
+                            Spacer()
+                            if config.isLoading {
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(supabaseURL.isEmpty || supabaseKey.isEmpty || config.isLoading)
+
+                    if let error = config.lastError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("Supabase (Remote Config)")
+                } footer: {
+                    Text("Connect to Supabase to manage categories and currencies from a web dashboard. Changes sync on next app launch.")
+                }
+
+                // MARK: Current config
+                Section("Active Categories (\(config.categories.count))") {
+                    ForEach(config.categories) { cat in
+                        HStack {
+                            Image(systemName: cat.icon ?? "archivebox")
+                                .foregroundStyle(.teal)
+                                .frame(width: 24)
+                            Text(cat.displayName)
+                            Spacer()
+                            Text(cat.name)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section("Active Currencies (\(config.currencies.count))") {
+                    ForEach(config.currencies) { cur in
+                        HStack {
+                            Text(cur.symbol)
+                                .font(.headline)
+                                .foregroundStyle(.teal)
+                                .frame(width: 32)
+                            Text(cur.name)
+                            Spacer()
+                            Text(cur.code)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                // MARK: Export
                 Section("Export") {
                     Button {
                         exportAll()
@@ -46,18 +135,17 @@ struct SettingsView: View {
                     .disabled(items.isEmpty)
                 }
 
+                // MARK: About
                 Section("About") {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("1.0.0")
-                            .foregroundStyle(.secondary)
+                        Text("1.0.0").foregroundStyle(.secondary)
                     }
                     HStack {
                         Text("Build")
                         Spacer()
-                        Text("1")
-                            .foregroundStyle(.secondary)
+                        Text("1").foregroundStyle(.secondary)
                     }
                     NavigationLink("Privacy Policy") {
                         PrivacyPolicyView()

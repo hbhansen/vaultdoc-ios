@@ -3,6 +3,7 @@ import SwiftData
 
 struct ItemDetailView: View {
     @Bindable var item: Item
+    @Environment(AppConfigStore.self) private var config
     @State private var viewModel = ItemDetailViewModel()
     @State private var showEdit = false
     @State private var showCamera = false
@@ -93,7 +94,7 @@ struct ItemDetailView: View {
                 Text("DECLARED VALUE")
                     .font(.caption2).bold()
                     .foregroundStyle(.secondary)
-                Text(CurrencyFormatter.format(item.estimatedValue))
+                Text(CurrencyFormatter.format(item.estimatedValue, for: item, config: config))
                     .font(.title2).bold()
                     .foregroundStyle(Color(red: 0.031, green: 0.314, blue: 0.255))
             }
@@ -107,7 +108,7 @@ struct ItemDetailView: View {
                 if viewModel.isRequestingEstimate {
                     ProgressView()
                 } else if let ai = item.aiEstimate {
-                    Text(CurrencyFormatter.format(ai))
+                    Text(CurrencyFormatter.format(ai, for: item, config: config))
                         .font(.title2).bold()
                         .foregroundStyle(.teal)
                 } else {
@@ -139,7 +140,7 @@ struct ItemDetailView: View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             InfoCell(label: "Category", value: item.categoryDisplayName, icon: item.categoryIcon)
             InfoCell(label: "Year", value: String(item.yearPurchased), icon: "calendar")
-            InfoCell(label: "Purchase Price", value: CurrencyFormatter.format(item.purchasePrice), icon: "eurosign")
+            InfoCell(label: "Purchase Price", value: CurrencyFormatter.format(item.purchasePrice, for: item, config: config), icon: "eurosign")
             InfoCell(label: "Serial Number",
                      value: item.serialNumber.isEmpty ? "—" : item.serialNumber,
                      icon: "number")

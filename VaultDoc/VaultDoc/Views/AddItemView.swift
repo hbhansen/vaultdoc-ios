@@ -6,11 +6,13 @@ import UniformTypeIdentifiers
 struct AddItemView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppConfigStore.self) private var config
 
     var existingItem: Item? = nil
 
     @State private var name = ""
     @State private var category = "other"
+    @State private var currency = "EUR"
     @State private var purchasePrice = ""
     @State private var estimatedValue = ""
     @State private var yearPurchased = Calendar.current.component(.year, from: Date())
@@ -29,26 +31,48 @@ struct AddItemView: View {
     var isEditing: Bool { existingItem != nil }
     var title: String { isEditing ? "Edit Item" : "Add Item" }
 
+    var selectedCurrency: RemoteCurrency? {
+        config.currency(code: currency)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Item Details") {
                     TextField("Name", text: $name)
+
                     Picker("Category", selection: $category) {
-                        ForEach(Item.categories, id: \.self) { cat in
-                            Text(cat.prefix(1).uppercased() + cat.dropFirst()).tag(cat)
+                        ForEach(config.categories) { cat in
+                            HStack {
+                                Image(systemName: cat.icon ?? "archivebox")
+                                Text(cat.displayName)
+                            }
+                            .tag(cat.name)
                         }
                     }
+
+                    Picker("Currency", selection: $currency) {
+                        ForEach(config.currencies) { cur in
+                            Text("\(cur.symbol)  \(cur.code) — \(cur.name)").tag(cur.code)
+                        }
+                    }
+
                     HStack {
-                        Text("€")
+                        Text(selectedCurrency?.symbol ?? "€")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
                         TextField("Purchase Price", text: $purchasePrice)
                             .keyboardType(.decimalPad)
                     }
+
                     HStack {
-                        Text("€")
+                        Text(selectedCurrency?.symbol ?? "€")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
                         TextField("Declared Value", text: $estimatedValue)
                             .keyboardType(.decimalPad)
                     }
+
                     Stepper("Year: \(yearPurchased)", value: $yearPurchased,
                             in: 1900...Calendar.current.component(.year, from: Date()))
                     TextField("Serial Number", text: $serialNumber)
@@ -169,6 +193,7 @@ struct AddItemView: View {
                 if let item = existingItem {
                     name = item.name
                     category = item.category
+                    currency = item.currency
                     purchasePrice = item.purchasePrice > 0 ? String(item.purchasePrice) : ""
                     estimatedValue = item.estimatedValue > 0 ? String(item.estimatedValue) : ""
                     yearPurchased = item.yearPurchased
@@ -188,6 +213,7 @@ struct AddItemView: View {
         if let existing = existingItem {
             existing.name = name
             existing.category = category
+            existing.currency = currency
             existing.purchasePrice = purchase
             existing.estimatedValue = declared
             existing.yearPurchased = yearPurchased
@@ -198,6 +224,7 @@ struct AddItemView: View {
             item = Item(
                 name: name,
                 category: category,
+                currency: currency,
                 purchasePrice: purchase,
                 estimatedValue: declared,
                 yearPurchased: yearPurchased,
