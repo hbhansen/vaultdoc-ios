@@ -4,15 +4,42 @@ struct SettingsView: View {
     let items: [Item]
     @Environment(\.dismiss) private var dismiss
     @Environment(AppConfigStore.self) private var config
+    @Environment(AuthService.self) private var auth
 
     @State private var apiKey = ""
     @State private var isAPIKeyVisible = false
     @State private var showShareSheet = false
     @State private var pdfData: Data?
+    @State private var defaultCurrencyCode = ""
 
     var body: some View {
         NavigationStack {
             Form {
+                // MARK: Account
+                Section {
+                    HStack {
+                        Image(systemName: "person.circle.fill")
+                            .font(.title)
+                            .foregroundStyle(.teal)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Signed in as")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(auth.userEmail)
+                                .font(.subheadline)
+                        }
+                    }
+                    Button(role: .destructive) {
+                        Task {
+                            await auth.signOut()
+                        }
+                    } label: {
+                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                } header: {
+                    Text("Account")
+                }
+
                 // MARK: Anthropic
                 Section {
                     HStack {
@@ -57,6 +84,12 @@ struct SettingsView: View {
                 }
 
                 Section("Active Currencies (\(config.currencies.count))") {
+                    Picker("Default Currency", selection: $defaultCurrencyCode) {
+                        ForEach(config.currencies) { cur in
+                            Text("\(cur.symbol)  \(cur.code) — \(cur.name)").tag(cur.code)
+                        }
+                    }
+
                     ForEach(config.currencies) { cur in
                         HStack {
                             Text(cur.symbol)
@@ -113,6 +146,18 @@ struct SettingsView: View {
             }
             .onAppear {
                 apiKey = KeychainHelper.shared.load(forKey: KeychainHelper.anthropicAPIKey) ?? ""
+                defaultCurrencyCode = config.defaultCurrencyCode
+            }
+            .onChange(of: defaultCurrencyCode) { _, newCode in
+                guard !newCode.isEmpty, !auth.userId.isEmpty else { return }
+                config.setDefaultCurrency(code: newCode)
+                Task {
+                    do {
+                        try await config.saveDefaultCurrency(userId: auth.userId)
+                    } catch {
+                        config.lastError = error.localizedDescription
+                    }
+                }
             }
         }
     }

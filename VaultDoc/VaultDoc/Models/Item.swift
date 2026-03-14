@@ -4,6 +4,7 @@ import SwiftData
 @Model
 final class Item {
     var id: UUID
+    var userId: String
     var name: String
     var category: String
     var currency: String
@@ -23,6 +24,7 @@ final class Item {
 
     init(
         id: UUID = UUID(),
+        userId: String = "",
         name: String,
         category: String = "other",
         currency: String = "EUR",
@@ -35,6 +37,7 @@ final class Item {
         createdAt: Date = Date()
     ) {
         self.id = id
+        self.userId = userId
         self.name = name
         self.category = category
         self.currency = currency
@@ -73,12 +76,14 @@ final class Item {
 final class ItemPhoto {
     var id: UUID
     var imageData: Data
+    var storagePath: String
     var capturedAt: Date
     var item: Item?
 
-    init(id: UUID = UUID(), imageData: Data, capturedAt: Date = Date()) {
+    init(id: UUID = UUID(), imageData: Data, storagePath: String = "", capturedAt: Date = Date()) {
         self.id = id
         self.imageData = imageData
+        self.storagePath = storagePath
         self.capturedAt = capturedAt
     }
 }
@@ -88,14 +93,16 @@ final class ItemDocument {
     var id: UUID
     var filename: String
     var fileData: Data
+    var storagePath: String
     var fileSize: Int
     var addedAt: Date
     var item: Item?
 
-    init(id: UUID = UUID(), filename: String, fileData: Data, addedAt: Date = Date()) {
+    init(id: UUID = UUID(), filename: String, fileData: Data, storagePath: String = "", addedAt: Date = Date()) {
         self.id = id
         self.filename = filename
         self.fileData = fileData
+        self.storagePath = storagePath
         self.fileSize = fileData.count
         self.addedAt = addedAt
     }

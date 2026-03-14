@@ -1,8 +1,14 @@
 import SwiftUI
 
-// Root view — delegates to VaultListView which owns the NavigationStack.
+// Root view — delegates to auth gate in VaultDocApp.
 struct ContentView: View {
+    @Environment(AuthService.self) private var auth
+
     var body: some View {
-        VaultListView()
+        if auth.isAuthenticated {
+            VaultListView(userId: auth.userId)
+        } else {
+            AuthView()
+        }
     }
 }

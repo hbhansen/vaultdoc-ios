@@ -4,10 +4,23 @@ import SwiftData
 struct VaultListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppConfigStore.self) private var config
-    @Query(sort: \Item.createdAt, order: .reverse) private var items: [Item]
+    @Environment(AuthService.self) private var auth
+    @Query private var items: [Item]
     @State private var viewModel = VaultViewModel()
     @State private var showAddItem = false
     @State private var showSettings = false
+    @State private var isSyncing = false
+    @State private var deleteError: String?
+
+    init(userId: String) {
+        _items = Query(
+            filter: #Predicate<Item> { item in
+                item.userId == userId
+            },
+            sort: \Item.createdAt,
+            order: .reverse
+        )
+    }
 
     var filtered: [Item] { viewModel.filteredItems(items) }
 
@@ -44,6 +57,79 @@ struct VaultListView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView(items: items)
             }
+            .alert("Delete Error", isPresented: .constant(deleteError != nil)) {
+                Button("OK") { deleteError = nil }
+            } message: {
+                Text(deleteError ?? "")
+            }
+            .task {
+                await config.syncDefaultCurrency(userId: auth.userId)
+                await syncFromSupabase()
+            }
+        }
+    }
+
+    private func syncFromSupabase() async {
+        guard !isSyncing else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+
+        do {
+            let (remoteItems, remotePhotos, remoteDocs) = try await SupabaseDataService.fetchAllUserData(userId: auth.userId)
+            let localIds = Set(items.map(\.id))
+
+            for remote in remoteItems {
+                if !localIds.contains(remote.id) {
+                    // Insert missing item locally
+                    let item = Item(
+                        id: remote.id,
+                        userId: remote.userId,
+                        name: remote.name,
+                        category: remote.category,
+                        currency: remote.currency,
+                        purchasePrice: remote.purchasePrice,
+                        estimatedValue: remote.estimatedValue,
+                        aiEstimate: remote.aiEstimate,
+                        yearPurchased: remote.yearPurchased,
+                        serialNumber: remote.serialNumber,
+                        notes: remote.notes,
+                        createdAt: remote.createdAt
+                    )
+                    modelContext.insert(item)
+
+                    // Download and insert photos for this item
+                    let photos = remotePhotos.filter { $0.itemId == remote.id }
+                    for rp in photos {
+                        if let imageData = try? await SupabaseDataService.downloadFile(path: rp.storagePath) {
+                            let photo = ItemPhoto(id: rp.id, imageData: imageData, storagePath: rp.storagePath, capturedAt: rp.capturedAt)
+                            photo.item = item
+                            modelContext.insert(photo)
+                            item.photos.append(photo)
+                        }
+                    }
+
+                    // Download and insert documents for this item
+                    let docs = remoteDocs.filter { $0.itemId == remote.id }
+                    for rd in docs {
+                        if let fileData = try? await SupabaseDataService.downloadFile(path: rd.storagePath) {
+                            let document = ItemDocument(id: rd.id, filename: rd.filename, fileData: fileData, storagePath: rd.storagePath, addedAt: rd.addedAt)
+                            document.item = item
+                            modelContext.insert(document)
+                            item.documents.append(document)
+                        }
+                    }
+                }
+            }
+
+            // Remove local items that no longer exist on server
+            let remoteIds = Set(remoteItems.map(\.id))
+            for localItem in items {
+                if !remoteIds.contains(localItem.id) {
+                    modelContext.delete(localItem)
+                }
+            }
+        } catch {
+            // Sync errors are non-fatal — local cache still works
         }
     }
 
@@ -89,8 +175,24 @@ struct VaultListView: View {
                     }
                     .onDelete { offsets in
                         let sourceItems = filtered
-                        for index in offsets {
-                            modelContext.delete(sourceItems[index])
+                        let itemsToDelete = offsets.map { sourceItems[$0] }
+                        Task {
+                            for item in itemsToDelete {
+                                do {
+                                    // Collect storage paths to delete files
+                                    let filePaths = item.photos.map(\.storagePath) + item.documents.map(\.storagePath)
+                                    let nonEmpty = filePaths.filter { !$0.isEmpty }
+                                    if !nonEmpty.isEmpty {
+                                        try? await SupabaseDataService.deleteFiles(paths: nonEmpty)
+                                    }
+                                    // Delete item from Supabase (cascades photos/docs records)
+                                    try await SupabaseDataService.deleteItem(id: item.id)
+                                    // Delete locally
+                                    modelContext.delete(item)
+                                } catch {
+                                    deleteError = error.localizedDescription
+                                }
+                            }
                         }
                     }
                 }

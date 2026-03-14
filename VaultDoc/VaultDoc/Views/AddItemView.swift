@@ -7,12 +7,13 @@ struct AddItemView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(AppConfigStore.self) private var config
+    @Environment(AuthService.self) private var auth
 
     var existingItem: Item? = nil
 
     @State private var name = ""
     @State private var category = "other"
-    @State private var currency = "EUR"
+    @State private var currency = ""
     @State private var purchasePrice = ""
     @State private var estimatedValue = ""
     @State private var yearPurchased = Calendar.current.component(.year, from: Date())
@@ -73,7 +74,7 @@ struct AddItemView: View {
                             .keyboardType(.decimalPad)
                     }
 
-                    Stepper("Year: \(yearPurchased)", value: $yearPurchased,
+                    Stepper("Year: \(String(yearPurchased))", value: $yearPurchased,
                             in: 1900...Calendar.current.component(.year, from: Date()))
                     TextField("Serial Number", text: $serialNumber)
                     TextField("Notes", text: $notes, axis: .vertical)
@@ -170,7 +171,7 @@ struct AddItemView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(isEditing ? "Save" : "Add") {
-                        saveItem()
+                        Task { await saveItem() }
                     }
                     .disabled(name.isEmpty || isSaving)
                 }
@@ -199,72 +200,186 @@ struct AddItemView: View {
                     yearPurchased = item.yearPurchased
                     serialNumber = item.serialNumber
                     notes = item.notes
+                } else {
+                    currency = config.defaultCurrencyCode
                 }
             }
         }
     }
 
-    private func saveItem() {
+    private func saveItem() async {
         isSaving = true
+        saveError = nil
         let purchase = Double(purchasePrice) ?? 0
         let declared = Double(estimatedValue) ?? 0
 
-        let item: Item
-        if let existing = existingItem {
-            existing.name = name
-            existing.category = category
-            existing.currency = currency
-            existing.purchasePrice = purchase
-            existing.estimatedValue = declared
-            existing.yearPurchased = yearPurchased
-            existing.serialNumber = serialNumber
-            existing.notes = notes
-            item = existing
-        } else {
-            item = Item(
-                name: name,
-                category: category,
-                currency: currency,
-                purchasePrice: purchase,
-                estimatedValue: declared,
-                yearPurchased: yearPurchased,
-                serialNumber: serialNumber,
-                notes: notes
-            )
-            modelContext.insert(item)
-        }
+        do {
+            if let existing = existingItem {
+                // MARK: Update existing item
+                let payload = ItemPayload(
+                    id: existing.id,
+                    userId: auth.userId,
+                    name: name,
+                    category: category,
+                    currency: currency,
+                    purchasePrice: purchase,
+                    estimatedValue: declared,
+                    aiEstimate: existing.aiEstimate,
+                    yearPurchased: yearPurchased,
+                    serialNumber: serialNumber,
+                    notes: notes,
+                    createdAt: existing.createdAt
+                )
+                _ = try await SupabaseDataService.updateItem(id: existing.id, payload)
 
-        for image in capturedImages {
-            if let data = ImageCompressor.compress(image) {
-                let photo = ItemPhoto(imageData: data)
-                photo.item = item
-                modelContext.insert(photo)
-                item.photos.append(photo)
-            }
-        }
+                // Update local
+                existing.name = name
+                existing.category = category
+                existing.currency = currency
+                existing.purchasePrice = purchase
+                existing.estimatedValue = declared
+                existing.yearPurchased = yearPurchased
+                existing.serialNumber = serialNumber
+                existing.notes = notes
 
-        for doc in attachedDocuments {
-            let document = ItemDocument(filename: doc.filename, fileData: doc.data)
-            document.item = item
-            modelContext.insert(document)
-            item.documents.append(document)
-        }
+                // Upload new photos
+                for image in capturedImages {
+                    if let data = ImageCompressor.compress(image) {
+                        let photoId = UUID()
+                        let storagePath = try await SupabaseDataService.uploadFile(
+                            userId: auth.userId, itemId: existing.id, fileId: photoId,
+                            filename: "photo.jpg", data: data, contentType: "image/jpeg"
+                        )
+                        let photoPayload = PhotoPayload(id: photoId, itemId: existing.id, storagePath: storagePath, capturedAt: Date())
+                        _ = try await SupabaseDataService.insertPhotoRecord(photoPayload)
 
-        Task {
-            if !name.isEmpty && purchase > 0 {
-                if let value = try? await AnthropicService.estimateValue(
-                    name: item.name,
-                    category: item.category,
-                    purchasePrice: item.purchasePrice,
-                    year: item.yearPurchased
-                ) {
-                    item.aiEstimate = value
+                        let photo = ItemPhoto(id: photoId, imageData: data, storagePath: storagePath)
+                        photo.item = existing
+                        modelContext.insert(photo)
+                        existing.photos.append(photo)
+                    }
+                }
+
+                // Upload new documents
+                for doc in attachedDocuments {
+                    let docId = UUID()
+                    let storagePath = try await SupabaseDataService.uploadFile(
+                        userId: auth.userId, itemId: existing.id, fileId: docId,
+                        filename: doc.filename, data: doc.data, contentType: "application/octet-stream"
+                    )
+                    let docPayload = DocPayload(id: docId, itemId: existing.id, filename: doc.filename, storagePath: storagePath, fileSize: doc.data.count, addedAt: Date())
+                    _ = try await SupabaseDataService.insertDocumentRecord(docPayload)
+
+                    let document = ItemDocument(id: docId, filename: doc.filename, fileData: doc.data, storagePath: storagePath)
+                    document.item = existing
+                    modelContext.insert(document)
+                    existing.documents.append(document)
+                }
+            } else {
+                // MARK: Create new item
+                let itemId = UUID()
+                let now = Date()
+                let payload = ItemPayload(
+                    id: itemId,
+                    userId: auth.userId,
+                    name: name,
+                    category: category,
+                    currency: currency,
+                    purchasePrice: purchase,
+                    estimatedValue: declared,
+                    aiEstimate: nil,
+                    yearPurchased: yearPurchased,
+                    serialNumber: serialNumber,
+                    notes: notes,
+                    createdAt: now
+                )
+                print("[AddItemView] Inserting item to Supabase...")
+                _ = try await SupabaseDataService.insertItem(payload)
+                print("[AddItemView] Item inserted successfully.")
+
+                let item = Item(
+                    id: itemId,
+                    userId: auth.userId,
+                    name: name,
+                    category: category,
+                    currency: currency,
+                    purchasePrice: purchase,
+                    estimatedValue: declared,
+                    yearPurchased: yearPurchased,
+                    serialNumber: serialNumber,
+                    notes: notes,
+                    createdAt: now
+                )
+                modelContext.insert(item)
+
+                // Upload photos
+                for (index, image) in capturedImages.enumerated() {
+                    if let data = ImageCompressor.compress(image) {
+                        let photoId = UUID()
+                        print("[AddItemView] Uploading photo \(index + 1)/\(capturedImages.count), size: \(data.count) bytes")
+                        let storagePath = try await SupabaseDataService.uploadFile(
+                            userId: auth.userId, itemId: itemId, fileId: photoId,
+                            filename: "photo.jpg", data: data, contentType: "image/jpeg"
+                        )
+                        print("[AddItemView] Photo uploaded, inserting record...")
+                        let photoPayload = PhotoPayload(id: photoId, itemId: itemId, storagePath: storagePath, capturedAt: Date())
+                        _ = try await SupabaseDataService.insertPhotoRecord(photoPayload)
+                        print("[AddItemView] Photo record inserted.")
+
+                        let photo = ItemPhoto(id: photoId, imageData: data, storagePath: storagePath)
+                        photo.item = item
+                        modelContext.insert(photo)
+                        item.photos.append(photo)
+                    } else {
+                        print("[AddItemView] Warning: ImageCompressor.compress returned nil for photo \(index + 1)")
+                    }
+                }
+
+                // Upload documents
+                for (index, doc) in attachedDocuments.enumerated() {
+                    let docId = UUID()
+                    print("[AddItemView] Uploading doc \(index + 1)/\(attachedDocuments.count): \(doc.filename)")
+                    let storagePath = try await SupabaseDataService.uploadFile(
+                        userId: auth.userId, itemId: itemId, fileId: docId,
+                        filename: doc.filename, data: doc.data, contentType: "application/octet-stream"
+                    )
+                    print("[AddItemView] Doc uploaded, inserting record...")
+                    let docPayload = DocPayload(id: docId, itemId: itemId, filename: doc.filename, storagePath: storagePath, fileSize: doc.data.count, addedAt: Date())
+                    _ = try await SupabaseDataService.insertDocumentRecord(docPayload)
+                    print("[AddItemView] Doc record inserted.")
+
+                    let document = ItemDocument(id: docId, filename: doc.filename, fileData: doc.data, storagePath: storagePath)
+                    document.item = item
+                    modelContext.insert(document)
+                    item.documents.append(document)
+                }
+
+                // Async AI estimate
+                Task {
+                    if !name.isEmpty && purchase > 0 {
+                        if let value = try? await AnthropicService.estimateValue(
+                            name: item.name,
+                            category: item.category,
+                            purchasePrice: item.purchasePrice,
+                            year: item.yearPurchased
+                        ) {
+                            item.aiEstimate = value
+                            // Persist AI estimate to Supabase
+                            var updated = payload
+                            updated.aiEstimate = value
+                            _ = try? await SupabaseDataService.updateItem(id: itemId, updated)
+                        }
+                    }
                 }
             }
-        }
 
-        isSaving = false
-        dismiss()
+            isSaving = false
+            dismiss()
+        } catch {
+            print("[AddItemView] Save failed: \(error)")
+            saveError = error.localizedDescription
+            isSaving = false
+        }
     }
 }
 

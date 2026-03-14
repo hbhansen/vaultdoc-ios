@@ -1,6 +1,7 @@
 import SwiftUI
-import AVFoundation
+@preconcurrency import AVFoundation
 
+@MainActor
 @Observable
 class CameraViewModel: NSObject {
     var capturedImageData: Data? = nil
@@ -11,6 +12,7 @@ class CameraViewModel: NSObject {
     var session = AVCaptureSession()
     private var photoOutput = AVCapturePhotoOutput()
     private var currentInput: AVCaptureDeviceInput?
+    private let sessionQueue = DispatchQueue(label: "VaultDoc.CameraSessionQueue")
 
     func checkPermissionAndSetup() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -18,7 +20,14 @@ class CameraViewModel: NSObject {
             setupSession()
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
-                if granted { self?.setupSession() } else { self?.permissionDenied = true }
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    if granted {
+                        self.setupSession()
+                    } else {
+                        self.permissionDenied = true
+                    }
+                }
             }
         default:
             permissionDenied = true
@@ -46,8 +55,11 @@ class CameraViewModel: NSObject {
 
         session.commitConfiguration()
 
-        Task.detached { [weak self] in
-            self?.session.startRunning()
+        let session = session
+        sessionQueue.async {
+            if !session.isRunning {
+                session.startRunning()
+            }
         }
     }
 
@@ -67,8 +79,11 @@ class CameraViewModel: NSObject {
     }
 
     func stopSession() {
-        Task.detached { [weak self] in
-            self?.session.stopRunning()
+        let session = session
+        sessionQueue.async {
+            if session.isRunning {
+                session.stopRunning()
+            }
         }
     }
 }

@@ -6,11 +6,13 @@ class AppConfigStore {
 
     var categories: [RemoteCategory] = AppConfigStore.defaultCategories
     var currencies: [RemoteCurrency] = AppConfigStore.defaultCurrencies
+    var defaultCurrencyCode: String = "EUR"
     var isLoading = false
     var lastError: String?
 
     private let categoriesCacheKey = "cached_categories"
     private let currenciesCacheKey = "cached_currencies"
+    private let defaultCurrencyKeyPrefix = "default_currency_code"
 
     private init() {
         loadFromCache()
@@ -34,6 +36,7 @@ class AppConfigStore {
             currencies = fetched
             persist(fetched, forKey: currenciesCacheKey)
         }
+        normalizeDefaultCurrency()
         isLoading = false
     }
 
@@ -45,6 +48,40 @@ class AppConfigStore {
 
     func currency(code: String) -> RemoteCurrency? {
         currencies.first { $0.code == code }
+    }
+
+    func setDefaultCurrency(code: String) {
+        guard currency(code: code) != nil else { return }
+        defaultCurrencyCode = code
+    }
+
+    func loadDefaultCurrency(userId: String) {
+        if let cached = UserDefaults.standard.string(forKey: defaultCurrencyKey(for: userId)) {
+            defaultCurrencyCode = cached
+        }
+        normalizeDefaultCurrency(userId: userId)
+    }
+
+    func syncDefaultCurrency(userId: String) async {
+        loadDefaultCurrency(userId: userId)
+
+        do {
+            if let profile = try await SupabaseDataService.fetchUserProfile(userId: userId),
+               let remoteCurrency = profile.defaultCurrency,
+               currency(code: remoteCurrency) != nil {
+                defaultCurrencyCode = remoteCurrency
+                persistDefaultCurrency(for: userId)
+            }
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func saveDefaultCurrency(userId: String) async throws {
+        normalizeDefaultCurrency(userId: userId)
+        persistDefaultCurrency(for: userId)
+        let payload = UserProfilePayload(id: userId, defaultCurrency: defaultCurrencyCode)
+        _ = try await SupabaseDataService.upsertUserProfile(payload)
     }
 
     // MARK: - Persistence (UserDefaults cache)
@@ -65,6 +102,24 @@ class AppConfigStore {
            let cached = try? decoder.decode([RemoteCurrency].self, from: data), !cached.isEmpty {
             currencies = cached
         }
+        normalizeDefaultCurrency()
+    }
+
+    private func normalizeDefaultCurrency(userId: String? = nil) {
+        if currency(code: defaultCurrencyCode) == nil {
+            defaultCurrencyCode = currencies.first?.code ?? "EUR"
+            if let userId {
+                persistDefaultCurrency(for: userId)
+            }
+        }
+    }
+
+    private func persistDefaultCurrency(for userId: String) {
+        UserDefaults.standard.set(defaultCurrencyCode, forKey: defaultCurrencyKey(for: userId))
+    }
+
+    private func defaultCurrencyKey(for userId: String) -> String {
+        "\(defaultCurrencyKeyPrefix)_\(userId)"
     }
 
     // MARK: - Hardcoded fallbacks (app works offline / before first sync)

@@ -3,11 +3,14 @@ import SwiftData
 
 struct ItemDetailView: View {
     @Bindable var item: Item
+    @Environment(\.modelContext) private var modelContext
     @Environment(AppConfigStore.self) private var config
+    @Environment(AuthService.self) private var auth
     @State private var viewModel = ItemDetailViewModel()
     @State private var showEdit = false
     @State private var showCamera = false
     @State private var selectedPhotoIndex = 0
+    @State private var photoUploadError: String?
 
     var body: some View {
         ScrollView {
@@ -41,15 +44,35 @@ struct ItemDetailView: View {
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraView { imageData in
-                let photo = ItemPhoto(imageData: imageData)
-                photo.item = item
-                item.photos.append(photo)
+                Task {
+                    do {
+                        let photoId = UUID()
+                        let storagePath = try await SupabaseDataService.uploadFile(
+                            userId: auth.userId, itemId: item.id, fileId: photoId,
+                            filename: "photo.jpg", data: imageData, contentType: "image/jpeg"
+                        )
+                        let payload = PhotoPayload(id: photoId, itemId: item.id, storagePath: storagePath, capturedAt: Date())
+                        _ = try await SupabaseDataService.insertPhotoRecord(payload)
+
+                        let photo = ItemPhoto(id: photoId, imageData: imageData, storagePath: storagePath)
+                        photo.item = item
+                        modelContext.insert(photo)
+                        item.photos.append(photo)
+                    } catch {
+                        photoUploadError = error.localizedDescription
+                    }
+                }
             }
         }
         .alert("Estimate Error", isPresented: .constant(viewModel.estimateError != nil)) {
             Button("OK") { viewModel.estimateError = nil }
         } message: {
             Text(viewModel.estimateError ?? "")
+        }
+        .alert("Upload Error", isPresented: .constant(photoUploadError != nil)) {
+            Button("OK") { photoUploadError = nil }
+        } message: {
+            Text(photoUploadError ?? "")
         }
     }
 

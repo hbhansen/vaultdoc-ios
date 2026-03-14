@@ -20,6 +20,23 @@ class ItemDetailViewModel {
                     year: item.yearPurchased
                 )
                 item.aiEstimate = value
+
+                // Persist AI estimate to Supabase
+                let payload = ItemPayload(
+                    id: item.id,
+                    userId: item.userId,
+                    name: item.name,
+                    category: item.category,
+                    currency: item.currency,
+                    purchasePrice: item.purchasePrice,
+                    estimatedValue: item.estimatedValue,
+                    aiEstimate: value,
+                    yearPurchased: item.yearPurchased,
+                    serialNumber: item.serialNumber,
+                    notes: item.notes,
+                    createdAt: item.createdAt
+                )
+                _ = try? await SupabaseDataService.updateItem(id: item.id, payload)
             } catch {
                 estimateError = error.localizedDescription
             }
