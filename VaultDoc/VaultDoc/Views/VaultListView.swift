@@ -67,7 +67,6 @@ struct VaultListView: View {
                 Text(deleteError ?? "")
             }
             .task {
-                await config.syncDefaultCurrency(userId: auth.userId)
                 await syncFromSupabase()
             }
             .brandBackground()
@@ -82,6 +81,8 @@ struct VaultListView: View {
         do {
             let (remoteItems, remotePhotos, remoteDocs) = try await SupabaseDataService.fetchAllUserData(userId: auth.userId)
             let localIds = Set(items.map(\.id))
+            let photosByItemId = Dictionary(grouping: remotePhotos, by: \.itemId)
+            let docsByItemId = Dictionary(grouping: remoteDocs, by: \.itemId)
 
             for remote in remoteItems {
                 if !localIds.contains(remote.id) {
@@ -103,7 +104,7 @@ struct VaultListView: View {
                     modelContext.insert(item)
 
                     // Download and insert photos for this item
-                    let photos = remotePhotos.filter { $0.itemId == remote.id }
+                    let photos = photosByItemId[remote.id] ?? []
                     for rp in photos {
                         if let imageData = try? await SupabaseDataService.downloadFile(path: rp.storagePath) {
                             let photo = ItemPhoto(id: rp.id, imageData: imageData, storagePath: rp.storagePath, capturedAt: rp.capturedAt)
@@ -114,7 +115,7 @@ struct VaultListView: View {
                     }
 
                     // Download and insert documents for this item
-                    let docs = remoteDocs.filter { $0.itemId == remote.id }
+                    let docs = docsByItemId[remote.id] ?? []
                     for rd in docs {
                         if let fileData = try? await SupabaseDataService.downloadFile(path: rd.storagePath) {
                             let document = ItemDocument(id: rd.id, filename: rd.filename, fileData: fileData, storagePath: rd.storagePath, addedAt: rd.addedAt)
@@ -279,10 +280,8 @@ struct ItemRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if let photo = item.photos.first, let ui = UIImage(data: photo.imageData) {
-                Image(uiImage: ui)
-                    .resizable()
-                    .scaledToFill()
+            if let photo = item.photos.first {
+                CachedDataImage(data: photo.imageData, cacheKey: photo.id.uuidString, maxDimension: 48)
                     .frame(width: 48, height: 48)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {

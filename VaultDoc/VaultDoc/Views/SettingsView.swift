@@ -10,6 +10,8 @@ struct SettingsView: View {
     @State private var showShareSheet = false
     @State private var pdfData: Data?
     @State private var defaultCurrencyCode = ""
+    @State private var isSavingCurrency = false
+    @State private var settingsError: String?
 
     var body: some View {
         NavigationStack {
@@ -61,6 +63,7 @@ struct SettingsView: View {
                             Text("\(cur.symbol)  \(cur.code) — \(L10n.currencyName(code: cur.code, fallback: cur.name))").tag(cur.code)
                         }
                     }
+                    .disabled(isSavingCurrency)
 
                     ForEach(config.currencies) { cur in
                         HStack {
@@ -74,6 +77,14 @@ struct SettingsView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                    }
+                }
+
+                if let settingsError {
+                    Section {
+                        Text(settingsError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
                 }
 
@@ -132,13 +143,20 @@ struct SettingsView: View {
             }
             .onChange(of: defaultCurrencyCode) { _, newCode in
                 guard !newCode.isEmpty, !auth.userId.isEmpty else { return }
-                config.setDefaultCurrency(code: newCode)
                 Task {
+                    isSavingCurrency = true
+                    settingsError = nil
                     do {
-                        try await config.saveDefaultCurrency(userId: auth.userId)
+                        try await config.applyProjectCurrency(
+                            code: newCode,
+                            to: items,
+                            userId: auth.userId
+                        )
                     } catch {
-                        config.lastError = error.localizedDescription
+                        settingsError = error.localizedDescription
+                        defaultCurrencyCode = config.defaultCurrencyCode
                     }
+                    isSavingCurrency = false
                 }
             }
         }

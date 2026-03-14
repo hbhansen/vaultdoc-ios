@@ -17,7 +17,7 @@ struct AddItemView: View {
     @State private var currency = ""
     @State private var purchasePrice = ""
     @State private var estimatedValue = ""
-    @State private var yearPurchased = Calendar.current.component(.year, from: Date())
+    @State private var yearPurchased = YearFormatter.currentYear
     @State private var serialNumber = ""
     @State private var notes = ""
 
@@ -53,10 +53,11 @@ struct AddItemView: View {
                         }
                     }
 
-                    Picker(L10n.tr("item.field.currency"), selection: $currency) {
-                        ForEach(config.currencies) { cur in
-                            Text("\(cur.symbol)  \(cur.code) — \(L10n.currencyName(code: cur.code, fallback: cur.name))").tag(cur.code)
-                        }
+                    LabeledContent(L10n.tr("item.field.currency")) {
+                        Text(
+                            "\(selectedCurrency?.symbol ?? config.currency(code: config.defaultCurrencyCode)?.symbol ?? "€")  \(currency)"
+                        )
+                        .foregroundStyle(.secondary)
                     }
 
                     HStack {
@@ -75,8 +76,11 @@ struct AddItemView: View {
                             .keyboardType(.decimalPad)
                     }
 
-                    Stepper(L10n.format("item.field.year_format", Int64(yearPurchased)), value: $yearPurchased,
-                            in: 1900...Calendar.current.component(.year, from: Date()))
+                    Stepper(
+                        L10n.format("item.field.year_format", Int64(yearPurchased)),
+                        value: $yearPurchased,
+                        in: 1900...YearFormatter.currentYear
+                    )
                     TextField(L10n.tr("item.field.serial_number"), text: $serialNumber)
                     TextField(L10n.tr("item.field.notes"), text: $notes, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
@@ -197,7 +201,7 @@ struct AddItemView: View {
                 if let item = existingItem {
                     name = item.name
                     category = item.category
-                    currency = item.currency
+                    currency = config.defaultCurrencyCode
                     purchasePrice = item.purchasePrice > 0 ? String(item.purchasePrice) : ""
                     estimatedValue = item.estimatedValue > 0 ? String(item.estimatedValue) : ""
                     yearPurchased = item.yearPurchased
@@ -206,6 +210,10 @@ struct AddItemView: View {
                 } else {
                     currency = config.defaultCurrencyCode
                 }
+            }
+            .onChange(of: config.defaultCurrencyCode) { _, newCode in
+                guard !newCode.isEmpty else { return }
+                currency = newCode
             }
         }
         .brandBackground()
@@ -247,34 +255,27 @@ struct AddItemView: View {
                 existing.notes = notes
 
                 // Upload new photos
-                for image in capturedImages {
-                    if let data = ImageCompressor.compress(image) {
-                        let photoId = UUID()
-                        let storagePath = try await SupabaseDataService.uploadFile(
-                            userId: auth.userId, itemId: existing.id, fileId: photoId,
-                            filename: "photo.jpg", data: data, contentType: "image/jpeg"
-                        )
-                        let photoPayload = PhotoPayload(id: photoId, itemId: existing.id, storagePath: storagePath, capturedAt: Date())
-                        _ = try await SupabaseDataService.insertPhotoRecord(photoPayload)
-
-                        let photo = ItemPhoto(id: photoId, imageData: data, storagePath: storagePath)
-                        photo.item = existing
-                        modelContext.insert(photo)
-                        existing.photos.append(photo)
-                    }
+                let uploadedPhotos = try await uploadPhotos(for: existing.id)
+                for uploadedPhoto in uploadedPhotos {
+                    let photo = ItemPhoto(
+                        id: uploadedPhoto.id,
+                        imageData: uploadedPhoto.data,
+                        storagePath: uploadedPhoto.storagePath
+                    )
+                    photo.item = existing
+                    modelContext.insert(photo)
+                    existing.photos.append(photo)
                 }
 
                 // Upload new documents
-                for doc in attachedDocuments {
-                    let docId = UUID()
-                    let storagePath = try await SupabaseDataService.uploadFile(
-                        userId: auth.userId, itemId: existing.id, fileId: docId,
-                        filename: doc.filename, data: doc.data, contentType: "application/octet-stream"
+                let uploadedDocuments = try await uploadDocuments(for: existing.id)
+                for uploadedDocument in uploadedDocuments {
+                    let document = ItemDocument(
+                        id: uploadedDocument.id,
+                        filename: uploadedDocument.filename,
+                        fileData: uploadedDocument.data,
+                        storagePath: uploadedDocument.storagePath
                     )
-                    let docPayload = DocPayload(id: docId, itemId: existing.id, filename: doc.filename, storagePath: storagePath, fileSize: doc.data.count, addedAt: Date())
-                    _ = try await SupabaseDataService.insertDocumentRecord(docPayload)
-
-                    let document = ItemDocument(id: docId, filename: doc.filename, fileData: doc.data, storagePath: storagePath)
                     document.item = existing
                     modelContext.insert(document)
                     existing.documents.append(document)
@@ -317,42 +318,27 @@ struct AddItemView: View {
                 modelContext.insert(item)
 
                 // Upload photos
-                for (index, image) in capturedImages.enumerated() {
-                    if let data = ImageCompressor.compress(image) {
-                        let photoId = UUID()
-                        print("[AddItemView] Uploading photo \(index + 1)/\(capturedImages.count), size: \(data.count) bytes")
-                        let storagePath = try await SupabaseDataService.uploadFile(
-                            userId: auth.userId, itemId: itemId, fileId: photoId,
-                            filename: "photo.jpg", data: data, contentType: "image/jpeg"
-                        )
-                        print("[AddItemView] Photo uploaded, inserting record...")
-                        let photoPayload = PhotoPayload(id: photoId, itemId: itemId, storagePath: storagePath, capturedAt: Date())
-                        _ = try await SupabaseDataService.insertPhotoRecord(photoPayload)
-                        print("[AddItemView] Photo record inserted.")
-
-                        let photo = ItemPhoto(id: photoId, imageData: data, storagePath: storagePath)
-                        photo.item = item
-                        modelContext.insert(photo)
-                        item.photos.append(photo)
-                    } else {
-                        print("[AddItemView] Warning: ImageCompressor.compress returned nil for photo \(index + 1)")
-                    }
+                let uploadedPhotos = try await uploadPhotos(for: itemId)
+                for uploadedPhoto in uploadedPhotos {
+                    let photo = ItemPhoto(
+                        id: uploadedPhoto.id,
+                        imageData: uploadedPhoto.data,
+                        storagePath: uploadedPhoto.storagePath
+                    )
+                    photo.item = item
+                    modelContext.insert(photo)
+                    item.photos.append(photo)
                 }
 
                 // Upload documents
-                for (index, doc) in attachedDocuments.enumerated() {
-                    let docId = UUID()
-                    print("[AddItemView] Uploading doc \(index + 1)/\(attachedDocuments.count): \(doc.filename)")
-                    let storagePath = try await SupabaseDataService.uploadFile(
-                        userId: auth.userId, itemId: itemId, fileId: docId,
-                        filename: doc.filename, data: doc.data, contentType: "application/octet-stream"
+                let uploadedDocuments = try await uploadDocuments(for: itemId)
+                for uploadedDocument in uploadedDocuments {
+                    let document = ItemDocument(
+                        id: uploadedDocument.id,
+                        filename: uploadedDocument.filename,
+                        fileData: uploadedDocument.data,
+                        storagePath: uploadedDocument.storagePath
                     )
-                    print("[AddItemView] Doc uploaded, inserting record...")
-                    let docPayload = DocPayload(id: docId, itemId: itemId, filename: doc.filename, storagePath: storagePath, fileSize: doc.data.count, addedAt: Date())
-                    _ = try await SupabaseDataService.insertDocumentRecord(docPayload)
-                    print("[AddItemView] Doc record inserted.")
-
-                    let document = ItemDocument(id: docId, filename: doc.filename, fileData: doc.data, storagePath: storagePath)
                     document.item = item
                     modelContext.insert(document)
                     item.documents.append(document)
@@ -383,6 +369,82 @@ struct AddItemView: View {
             print("[AddItemView] Save failed: \(error)")
             saveError = error.localizedDescription
             isSaving = false
+        }
+    }
+
+    private func uploadPhotos(for itemId: UUID) async throws -> [(id: UUID, data: Data, storagePath: String)] {
+        try await withThrowingTaskGroup(of: (Int, UUID, Data, String)?.self) { group in
+            for (index, image) in capturedImages.enumerated() {
+                group.addTask {
+                    guard let data = ImageCompressor.compress(image) else { return nil }
+
+                    let photoId = UUID()
+                    let storagePath = try await SupabaseDataService.uploadFile(
+                        userId: auth.userId,
+                        itemId: itemId,
+                        fileId: photoId,
+                        filename: "photo.jpg",
+                        data: data,
+                        contentType: "image/jpeg"
+                    )
+                    let payload = PhotoPayload(
+                        id: photoId,
+                        itemId: itemId,
+                        storagePath: storagePath,
+                        capturedAt: Date()
+                    )
+                    _ = try await SupabaseDataService.insertPhotoRecord(payload)
+                    return (index, photoId, data, storagePath)
+                }
+            }
+
+            var uploadedPhotos: [(Int, UUID, Data, String)] = []
+            for try await result in group {
+                if let result {
+                    uploadedPhotos.append(result)
+                }
+            }
+
+            return uploadedPhotos
+                .sorted { $0.0 < $1.0 }
+                .map { ($0.1, $0.2, $0.3) }
+        }
+    }
+
+    private func uploadDocuments(for itemId: UUID) async throws -> [(id: UUID, filename: String, data: Data, storagePath: String)] {
+        try await withThrowingTaskGroup(of: (Int, UUID, String, Data, String).self) { group in
+            for (index, document) in attachedDocuments.enumerated() {
+                group.addTask {
+                    let documentId = UUID()
+                    let storagePath = try await SupabaseDataService.uploadFile(
+                        userId: auth.userId,
+                        itemId: itemId,
+                        fileId: documentId,
+                        filename: document.filename,
+                        data: document.data,
+                        contentType: "application/octet-stream"
+                    )
+                    let payload = DocPayload(
+                        id: documentId,
+                        itemId: itemId,
+                        filename: document.filename,
+                        storagePath: storagePath,
+                        fileSize: document.data.count,
+                        addedAt: Date()
+                    )
+                    _ = try await SupabaseDataService.insertDocumentRecord(payload)
+                    return (index, documentId, document.filename, document.data, storagePath)
+                }
+            }
+
+            var uploadedDocuments: [(Int, UUID, String, Data, String)] = []
+            for try await result in group {
+                uploadedDocuments.append(result)
+            }
+
+            return uploadedDocuments
+                .sorted { $0.0 < $1.0 }
+                .map { ($0.1, $0.2, $0.3, $0.4) }
         }
     }
 }

@@ -4,6 +4,7 @@ import SwiftData
 @main
 struct VaultDocApp: App {
     @State private var languageSettings = LanguageSettings.shared
+    @State private var showsOpeningSplash = true
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([Item.self, ItemPhoto.self, ItemDocument.self])
@@ -26,11 +27,20 @@ struct VaultDocApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if AuthService.shared.isAuthenticated {
-                    VaultListView(userId: AuthService.shared.userId)
-                } else {
-                    AuthView()
+            ZStack {
+                Group {
+                    if AuthService.shared.isAuthenticated {
+                        VaultListView(userId: AuthService.shared.userId)
+                    } else {
+                        AuthView()
+                    }
+                }
+                .opacity(showsOpeningSplash ? 0 : 1)
+
+                if showsOpeningSplash {
+                    OpeningSplashView()
+                        .transition(.opacity)
+                        .zIndex(1)
                 }
             }
             .id(languageSettings.selectedLanguage)
@@ -40,11 +50,21 @@ struct VaultDocApp: App {
             .environment(\.locale, languageSettings.locale)
             .tint(BrandTheme.accent)
             .task {
+                let minimumDisplayTask = Task {
+                    try? await Task.sleep(for: .seconds(1.2))
+                }
                 await AuthService.shared.restoreSession()
                 await AppConfigStore.shared.refresh(
                     supabaseURL: Config.Supabase.url,
                     supabaseKey: Config.Supabase.anonKey
                 )
+                if AuthService.shared.isAuthenticated {
+                    await AppConfigStore.shared.syncDefaultCurrency(userId: AuthService.shared.userId)
+                }
+                await minimumDisplayTask.value
+                withAnimation(.easeOut(duration: 0.45)) {
+                    showsOpeningSplash = false
+                }
             }
         }
         .modelContainer(sharedModelContainer)

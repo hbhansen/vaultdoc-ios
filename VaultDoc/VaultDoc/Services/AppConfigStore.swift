@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 @Observable
 class AppConfigStore {
     static let shared = AppConfigStore()
@@ -82,6 +83,54 @@ class AppConfigStore {
         persistDefaultCurrency(for: userId)
         let payload = UserProfilePayload(id: userId, defaultCurrency: defaultCurrencyCode)
         _ = try await SupabaseDataService.upsertUserProfile(payload)
+    }
+
+    func applyProjectCurrency(
+        code: String,
+        to items: [Item],
+        userId: String
+    ) async throws {
+        guard currency(code: code) != nil else { return }
+
+        setDefaultCurrency(code: code)
+        try await saveDefaultCurrency(userId: userId)
+
+        let updates = items
+            .filter { $0.currency != code }
+            .map { item in
+                ItemPayload(
+                    id: item.id,
+                    userId: item.userId,
+                    name: item.name,
+                    category: item.category,
+                    currency: code,
+                    purchasePrice: item.purchasePrice,
+                    estimatedValue: item.estimatedValue,
+                    aiEstimate: item.aiEstimate,
+                    yearPurchased: item.yearPurchased,
+                    serialNumber: item.serialNumber,
+                    notes: item.notes,
+                    createdAt: item.createdAt
+                )
+            }
+
+        try await withThrowingTaskGroup(of: UUID.self) { group in
+            for payload in updates {
+                group.addTask {
+                    _ = try await SupabaseDataService.updateItem(id: payload.id, payload)
+                    return payload.id
+                }
+            }
+
+            var updatedIds = Set<UUID>()
+            for try await updatedId in group {
+                updatedIds.insert(updatedId)
+            }
+
+            for item in items where updatedIds.contains(item.id) {
+                item.currency = code
+            }
+        }
     }
 
     // MARK: - Persistence (UserDefaults cache)

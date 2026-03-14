@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import QuickLook
 
 struct ItemDetailView: View {
     @Bindable var item: Item
@@ -12,6 +13,7 @@ struct ItemDetailView: View {
     @State private var showCamera = false
     @State private var selectedPhotoIndex = 0
     @State private var photoUploadError: String?
+    @State private var previewDocument: PreviewDocument?
 
     var body: some View {
         ScrollView {
@@ -44,19 +46,24 @@ struct ItemDetailView: View {
                 ShareSheet(items: [data])
             }
         }
+        .sheet(item: $previewDocument) { document in
+            DocumentPreviewSheet(document: document)
+        }
         .fullScreenCover(isPresented: $showCamera) {
             CameraView { imageData in
                 Task {
                     do {
                         let photoId = UUID()
+                        let uploadData = ImageCompressor.downsampledImage(data: imageData, maxDimension: 2_048)?
+                            .jpegData(compressionQuality: 0.8) ?? imageData
                         let storagePath = try await SupabaseDataService.uploadFile(
                             userId: auth.userId, itemId: item.id, fileId: photoId,
-                            filename: "photo.jpg", data: imageData, contentType: "image/jpeg"
+                            filename: "photo.jpg", data: uploadData, contentType: "image/jpeg"
                         )
                         let payload = PhotoPayload(id: photoId, itemId: item.id, storagePath: storagePath, capturedAt: Date())
                         _ = try await SupabaseDataService.insertPhotoRecord(payload)
 
-                        let photo = ItemPhoto(id: photoId, imageData: imageData, storagePath: storagePath)
+                        let photo = ItemPhoto(id: photoId, imageData: uploadData, storagePath: storagePath)
                         photo.item = item
                         modelContext.insert(photo)
                         item.photos.append(photo)
@@ -98,12 +105,8 @@ struct ItemDetailView: View {
             } else {
                 TabView(selection: $selectedPhotoIndex) {
                     ForEach(Array(item.photos.enumerated()), id: \.offset) { idx, photo in
-                        if let ui = UIImage(data: photo.imageData) {
-                            Image(uiImage: ui)
-                                .resizable()
-                                .scaledToFill()
-                                .tag(idx)
-                        }
+                        CachedDataImage(data: photo.imageData, cacheKey: photo.id.uuidString, maxDimension: 1_024)
+                            .tag(idx)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
@@ -144,17 +147,10 @@ struct ItemDetailView: View {
                         .font(.title2).bold()
                         .foregroundStyle(BrandTheme.accentGradient)
                 } else {
-                    Button {
-                        viewModel.requestAIEstimate(for: item)
-                    } label: {
-                        Text(L10n.tr("item_detail.get_estimate"))
-                            .font(.subheadline)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(BrandTheme.surface)
-                            .foregroundStyle(BrandTheme.accentBright)
-                            .clipShape(Capsule())
-                    }
+                    Text(L10n.tr("item_detail.estimate_coming"))
+                        .font(.subheadline)
+                        .foregroundStyle(BrandTheme.textSecondary)
+                        .multilineTextAlignment(.trailing)
                 }
             }
         }
@@ -171,7 +167,7 @@ struct ItemDetailView: View {
     private var infoGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             InfoCell(label: L10n.tr("item.field.category"), value: item.categoryDisplayName, icon: item.categoryIcon)
-            InfoCell(label: L10n.tr("item.field.year"), value: String(item.yearPurchased), icon: "calendar")
+            InfoCell(label: L10n.tr("item.field.year_purchased"), value: YearFormatter.display(item.yearPurchased), icon: "calendar")
             InfoCell(label: L10n.tr("item.field.purchase_price"), value: CurrencyFormatter.format(item.purchasePrice, for: item, config: config), icon: "eurosign")
             InfoCell(label: L10n.tr("item.field.serial_number"),
                      value: item.serialNumber.isEmpty ? L10n.placeholderDash : item.serialNumber,
@@ -203,16 +199,12 @@ struct ItemDetailView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(Array(item.photos.enumerated()), id: \.offset) { idx, photo in
-                            if let ui = UIImage(data: photo.imageData) {
-                                Image(uiImage: ui)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 72, height: 72)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    .onTapGesture {
-                                        selectedPhotoIndex = idx
-                                    }
-                            }
+                            CachedDataImage(data: photo.imageData, cacheKey: photo.id.uuidString, maxDimension: 72)
+                                .frame(width: 72, height: 72)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .onTapGesture {
+                                    selectedPhotoIndex = idx
+                                }
                         }
                         Button {
                             showCamera = true
@@ -239,22 +231,8 @@ struct ItemDetailView: View {
 
     private var documentsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(L10n.tr("item_detail.documents"))
-                    .font(.headline)
-                Spacer()
-                Button {
-                    viewModel.generatePDF(for: item)
-                } label: {
-                    Label(L10n.tr("item_detail.export_pdf"), systemImage: "arrow.up.doc")
-                        .font(.subheadline)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(BrandTheme.accentGradient)
-                        .foregroundStyle(BrandTheme.backgroundBottom)
-                        .clipShape(Capsule())
-                }
-            }
+            Text(L10n.tr("item_detail.documents"))
+                .font(.headline)
             if item.documents.isEmpty {
                 Text(L10n.tr("item_detail.no_documents_attached"))
                     .font(.caption)
@@ -265,9 +243,14 @@ struct ItemDetailView: View {
                         Image(systemName: "doc.fill")
                             .foregroundStyle(BrandTheme.accentBright)
                         VStack(alignment: .leading) {
-                            Text(doc.filename)
-                                .font(.subheadline)
-                                .lineLimit(1)
+                            Button {
+                                previewDocument = PreviewDocument.make(from: doc)
+                            } label: {
+                                Text(doc.filename)
+                                    .font(.subheadline)
+                                    .lineLimit(1)
+                                    .foregroundStyle(BrandTheme.accentBright)
+                            }
                             Text(doc.formattedSize)
                                 .font(.caption)
                                 .foregroundStyle(BrandTheme.textSecondary)
@@ -278,6 +261,18 @@ struct ItemDetailView: View {
                     Divider()
                 }
             }
+            Button {
+                viewModel.generatePDF(for: item)
+            } label: {
+                Label(L10n.tr("item_detail.export_pdf"), systemImage: "arrow.up.doc")
+                    .font(.subheadline)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(BrandTheme.accentGradient)
+                    .foregroundStyle(BrandTheme.backgroundBottom)
+                    .clipShape(Capsule())
+            }
+            .padding(.top, 4)
         }
         .padding()
         .background(RoundedRectangle(cornerRadius: 16).fill(BrandTheme.surface))
@@ -319,4 +314,112 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+struct DocumentPreviewSheet: UIViewControllerRepresentable {
+    let document: PreviewDocument
+
+    func makeUIViewController(context: Context) -> QLPreviewController {
+        let controller = QLPreviewController()
+        controller.dataSource = context.coordinator
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: QLPreviewController, context: Context) {
+        context.coordinator.document = document
+        uiViewController.reloadData()
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(document: document)
+    }
+
+    final class Coordinator: NSObject, QLPreviewControllerDataSource {
+        var document: PreviewDocument
+
+        init(document: PreviewDocument) {
+            self.document = document
+        }
+
+        func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
+            1
+        }
+
+        func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+            document.url as NSURL
+        }
+    }
+}
+
+struct PreviewDocument: Identifiable {
+    let id: UUID
+    let url: URL
+
+    static func make(from document: ItemDocument) -> PreviewDocument? {
+        let filename = document.filename.isEmpty ? "Document" : document.filename
+        let sanitizedName = filename.replacingOccurrences(of: "/", with: "-")
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(document.id.uuidString)
+            .appendingPathExtension((sanitizedName as NSString).pathExtension)
+
+        do {
+            try document.fileData.write(to: url, options: .atomic)
+            return PreviewDocument(id: document.id, url: url)
+        } catch {
+            return nil
+        }
+    }
+}
+
+struct CachedDataImage: View {
+    let data: Data
+    let cacheKey: String
+    let maxDimension: CGFloat
+
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(BrandTheme.surface)
+                    .task(id: cacheKey) {
+                        image = await DataImageCache.shared.image(
+                            for: cacheKey,
+                            data: data,
+                            maxDimension: maxDimension
+                        )
+                    }
+            }
+        }
+    }
+}
+
+@MainActor
+final class DataImageCache {
+    static let shared = DataImageCache()
+
+    private let cache = NSCache<NSString, UIImage>()
+
+    private init() {}
+
+    func image(for key: String, data: Data, maxDimension: CGFloat) async -> UIImage? {
+        let cacheKey = "\(key)-\(Int(maxDimension))" as NSString
+        if let cached = cache.object(forKey: cacheKey) {
+            return cached
+        }
+
+        let image = await Task.detached(priority: .userInitiated) {
+            ImageCompressor.downsampledImage(data: data, maxDimension: maxDimension)
+        }.value
+
+        if let image {
+            cache.setObject(image, forKey: cacheKey)
+        }
+        return image
+    }
 }

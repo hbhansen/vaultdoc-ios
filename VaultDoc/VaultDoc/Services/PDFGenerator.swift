@@ -1,5 +1,6 @@
 import PDFKit
 import UIKit
+import UniformTypeIdentifiers
 
 struct PDFGenerator {
     static let teal = UIColor(red: 0.114, green: 0.620, blue: 0.459, alpha: 1)
@@ -91,11 +92,11 @@ struct PDFGenerator {
         ]
 
         L10n.tr("item_detail.declared_value_uppercase").draw(at: CGPoint(x: 50, y: y + 20), withAttributes: labelAttrs)
-        CurrencyFormatter.format(item.estimatedValue).draw(at: CGPoint(x: 50, y: y + 36), withAttributes: valueAttrs)
+        CurrencyFormatter.format(item.estimatedValue, code: item.currency).draw(at: CGPoint(x: 50, y: y + 36), withAttributes: valueAttrs)
 
         if let ai = item.aiEstimate {
             L10n.tr("item_detail.ai_estimate_uppercase").draw(at: CGPoint(x: 320, y: y + 20), withAttributes: labelAttrs)
-            CurrencyFormatter.format(ai).draw(at: CGPoint(x: 320, y: y + 36), withAttributes: valueAttrs)
+            CurrencyFormatter.format(ai, code: item.currency).draw(at: CGPoint(x: 320, y: y + 36), withAttributes: valueAttrs)
         }
 
         return y + 72 + 16
@@ -104,8 +105,8 @@ struct PDFGenerator {
     private static func drawDetailsGrid(in rect: CGRect, ctx: CGContext, item: Item, y: CGFloat) -> CGFloat {
         let fields: [(String, String)] = [
             (L10n.tr("item.field.category"), item.categoryDisplayName),
-            (L10n.tr("item.field.year_purchased"), String(item.yearPurchased)),
-            (L10n.tr("item.field.purchase_price"), CurrencyFormatter.format(item.purchasePrice)),
+            (L10n.tr("item.field.year_purchased"), YearFormatter.display(item.yearPurchased)),
+            (L10n.tr("item.field.purchase_price"), CurrencyFormatter.format(item.purchasePrice, code: item.currency)),
             (L10n.tr("item.field.serial_number"), item.serialNumber.isEmpty ? L10n.placeholderDash : item.serialNumber),
             (L10n.tr("item.field.notes"), item.notes.isEmpty ? L10n.placeholderDash : item.notes)
         ]
@@ -196,17 +197,97 @@ struct PDFGenerator {
 
         L10n.tr("item_detail.documents_uppercase").draw(at: CGPoint(x: 30, y: y), withAttributes: headerAttrs)
         var currentY = y + 18
+        let previewWidth = rect.width - 60
+        let previewHeight: CGFloat = 220
 
         for doc in item.documents {
-            doc.filename.draw(at: CGPoint(x: 44, y: currentY), withAttributes: docAttrs)
-            doc.formattedSize.draw(at: CGPoint(x: 44, y: currentY + 13), withAttributes: sizeAttrs)
-
-            // File icon placeholder
-            ctx.setFillColor(teal.withAlphaComponent(0.2).cgColor)
-            ctx.fill(CGRect(x: 30, y: currentY, width: 10, height: 14))
-
-            currentY += 32
+            let previewRect = CGRect(x: 30, y: currentY, width: previewWidth, height: previewHeight)
+            drawDocumentThumbnail(for: doc, in: previewRect, ctx: ctx)
+            doc.filename.draw(at: CGPoint(x: 30, y: currentY + previewHeight + 10), withAttributes: docAttrs)
+            doc.formattedSize.draw(at: CGPoint(x: 30, y: currentY + previewHeight + 26), withAttributes: sizeAttrs)
+            currentY += previewHeight + 48
         }
+    }
+
+    private static func drawDocumentThumbnail(for document: ItemDocument, in rect: CGRect, ctx: CGContext) {
+        let thumbnail = documentThumbnail(for: document, targetSize: rect.size)
+        let roundedRect = UIBezierPath(roundedRect: rect, cornerRadius: 6)
+        ctx.saveGState()
+        ctx.addPath(roundedRect.cgPath)
+        ctx.clip()
+
+        if let thumbnail {
+            drawAspectFitImage(thumbnail, in: rect)
+        } else {
+            ctx.setFillColor(UIColor.white.cgColor)
+            ctx.fill(rect)
+        }
+
+        ctx.restoreGState()
+        ctx.setStrokeColor(teal.withAlphaComponent(0.3).cgColor)
+        ctx.setLineWidth(1)
+        ctx.addPath(roundedRect.cgPath)
+        ctx.strokePath()
+
+        if thumbnail == nil {
+            let iconConfig = UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)
+            let icon = UIImage(systemName: "doc.text", withConfiguration: iconConfig)
+            let iconRect = CGRect(
+                x: rect.midX - 9,
+                y: rect.midY - 9,
+                width: 18,
+                height: 18
+            )
+            icon?.withTintColor(darkTeal, renderingMode: .alwaysOriginal).draw(in: iconRect)
+        }
+    }
+
+    private static func drawAspectFitImage(_ image: UIImage, in rect: CGRect) {
+        let imageSize = image.size
+        guard imageSize.width > 0, imageSize.height > 0 else {
+            image.draw(in: rect)
+            return
+        }
+
+        let scale = min(rect.width / imageSize.width, rect.height / imageSize.height)
+        let fittedSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+        let fittedRect = CGRect(
+            x: rect.midX - fittedSize.width / 2,
+            y: rect.midY - fittedSize.height / 2,
+            width: fittedSize.width,
+            height: fittedSize.height
+        )
+
+        UIColor.white.setFill()
+        UIRectFill(rect)
+        image.draw(in: fittedRect)
+    }
+
+    private static func documentThumbnail(for document: ItemDocument, targetSize: CGSize) -> UIImage? {
+        if let pdfThumbnail = pdfThumbnail(for: document.fileData, targetSize: targetSize) {
+            return pdfThumbnail
+        }
+
+        if let image = UIImage(data: document.fileData) {
+            return image
+        }
+
+        let fileExtension = URL(fileURLWithPath: document.filename).pathExtension
+        if let type = UTType(filenameExtension: fileExtension),
+           type.conforms(to: .image),
+           let image = UIImage(data: document.fileData) {
+            return image
+        }
+
+        return nil
+    }
+
+    private static func pdfThumbnail(for data: Data, targetSize: CGSize) -> UIImage? {
+        guard let pdf = PDFDocument(data: data), let page = pdf.page(at: 0) else {
+            return nil
+        }
+
+        return page.thumbnail(of: targetSize, for: .cropBox)
     }
 
     private static func drawFooter(in rect: CGRect, ctx: CGContext, page: Int) {

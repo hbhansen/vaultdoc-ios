@@ -400,6 +400,8 @@
 				DEVELOPMENT_TEAM = 26GL6MZ47F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = VaultDoc;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "VaultDoc needs camera access to photograph your valuables";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "VaultDoc saves item photos to your library";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "VaultDoc needs photo library access to attach item photos";
@@ -435,6 +437,8 @@
 				DEVELOPMENT_TEAM = 26GL6MZ47F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = VaultDoc;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSCameraUsageDescription = "VaultDoc needs camera access to photograph your valuables";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "VaultDoc saves item photos to your library";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "VaultDoc needs photo library access to attach item photos";

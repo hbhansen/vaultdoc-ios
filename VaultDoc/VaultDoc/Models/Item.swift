@@ -31,7 +31,7 @@ final class Item {
         purchasePrice: Double = 0,
         estimatedValue: Double = 0,
         aiEstimate: Double? = nil,
-        yearPurchased: Int = Calendar.current.component(.year, from: Date()),
+        yearPurchased: Int = YearFormatter.currentYear,
         serialNumber: String = "",
         notes: String = "",
         createdAt: Date = Date()
