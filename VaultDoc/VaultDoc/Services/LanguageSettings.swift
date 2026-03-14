@@ -14,6 +14,17 @@ final class LanguageSettings {
             Locale(identifier: rawValue)
         }
 
+        var bundle: Bundle {
+            guard
+                let path = Bundle.main.path(forResource: rawValue, ofType: "lproj"),
+                let bundle = Bundle(path: path)
+            else {
+                return .main
+            }
+
+            return bundle
+        }
+
         var localizedName: String {
             switch self {
             case .english:
@@ -34,6 +45,10 @@ final class LanguageSettings {
 
     var locale: Locale {
         selectedLanguage.locale
+    }
+
+    var bundle: Bundle {
+        selectedLanguage.bundle
     }
 
     private init() {

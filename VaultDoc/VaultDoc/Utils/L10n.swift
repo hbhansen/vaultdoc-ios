@@ -2,11 +2,13 @@ import Foundation
 
 enum L10n {
     static func tr(_ key: String) -> String {
-        String(
-            localized: String.LocalizationValue(key),
-            bundle: .main,
-            locale: LanguageSettings.shared.locale
-        )
+        let languageSettings = LanguageSettings.shared
+        let localized = NSLocalizedString(key, bundle: languageSettings.bundle, comment: "")
+        if localized != key {
+            return localized
+        }
+
+        return NSLocalizedString(key, bundle: .main, comment: "")
     }
 
     static func format(_ key: String, _ arguments: CVarArg...) -> String {

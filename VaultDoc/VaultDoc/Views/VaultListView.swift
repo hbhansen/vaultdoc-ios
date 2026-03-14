@@ -213,7 +213,11 @@ struct VaultListView: View {
             Divider().frame(height: 50)
             StatCard(
                 title: L10n.tr("vault.stat.total_value"),
-                value: CurrencyFormatter.format(viewModel.totalDeclaredValue(items)),
+                value: CurrencyFormatter.format(
+                    viewModel.totalDeclaredValue(items),
+                    code: config.defaultCurrencyCode,
+                    symbol: config.currency(code: config.defaultCurrencyCode)?.symbol
+                ),
                 icon: "eurosign.circle.fill"
             )
             Divider().frame(height: 50)
@@ -255,6 +259,8 @@ struct StatCard: View {
 }
 
 struct ItemRow: View {
+    @Environment(AppConfigStore.self) private var config
+
     let item: Item
 
     var body: some View {
@@ -281,7 +287,7 @@ struct ItemRow: View {
                     .lineLimit(1)
                 HStack(spacing: 6) {
                     CategoryBadge(category: item.category)
-                    Text(CurrencyFormatter.format(item.estimatedValue))
+                    Text(CurrencyFormatter.format(item.estimatedValue, for: item, config: config))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

@@ -33,6 +33,7 @@ struct VaultDocApp: App {
                     AuthView()
                 }
             }
+            .id(languageSettings.selectedLanguage)
             .environment(AppConfigStore.shared)
             .environment(AuthService.shared)
             .environment(languageSettings)
