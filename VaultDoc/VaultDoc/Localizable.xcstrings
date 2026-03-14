@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "" : {
+
+    },
     "%@  %@" : {
       "localizations" : {
         "en" : {
@@ -1004,13 +1007,13 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Købsår"
+            "value" : "Købsdato"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Year Purchased"
+            "value" : "Purchase Date"
           }
         }
       }

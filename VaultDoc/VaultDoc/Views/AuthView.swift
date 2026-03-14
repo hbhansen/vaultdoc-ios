@@ -35,16 +35,49 @@ struct AuthView: View {
                     .padding(.top, 36)
 
                     VStack(spacing: 16) {
-                        TextField(L10n.tr("auth.email"), text: $email)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .autocorrectionDisabled()
-                            .textInputAutocapitalization(.never)
-                            .brandInputField()
+                        if auth.canUseBiometricLogin {
+                            Button {
+                                Task {
+                                    await auth.signInWithBiometrics()
+                                }
+                            } label: {
+                                Label(auth.biometricButtonTitle, systemImage: "faceid")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(BrandTheme.surface)
+                                    .foregroundStyle(BrandTheme.textPrimary)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                            .stroke(BrandTheme.border, lineWidth: 1)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            }
+                            .disabled(auth.isLoading)
+                        }
 
-                        SecureField(L10n.tr("auth.password"), text: $password)
-                            .textContentType(isSignUp ? .newPassword : .password)
-                            .brandInputField()
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L10n.tr("auth.email"))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(BrandTheme.textSecondary)
+
+                            TextField("", text: $email)
+                                .textContentType(.emailAddress)
+                                .keyboardType(.emailAddress)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                                .brandInputField()
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L10n.tr("auth.password"))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(BrandTheme.textSecondary)
+
+                            SecureField("", text: $password)
+                                .textContentType(isSignUp ? .newPassword : .password)
+                                .brandInputField()
+                        }
 
                         if let error = auth.errorMessage {
                             Text(error)
@@ -98,6 +131,9 @@ struct AuthView: View {
                 }
             }
             .brandBackground()
+            .onAppear {
+                auth.refreshBiometricAvailability()
+            }
         }
     }
 }

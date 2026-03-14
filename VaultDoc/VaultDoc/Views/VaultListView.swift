@@ -96,7 +96,7 @@ struct VaultListView: View {
                         purchasePrice: remote.purchasePrice,
                         estimatedValue: remote.estimatedValue,
                         aiEstimate: remote.aiEstimate,
-                        yearPurchased: remote.yearPurchased,
+                        purchaseDate: YearFormatter.date(fromYear: remote.yearPurchased),
                         serialNumber: remote.serialNumber,
                         notes: remote.notes,
                         createdAt: remote.createdAt

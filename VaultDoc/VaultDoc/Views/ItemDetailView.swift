@@ -167,8 +167,8 @@ struct ItemDetailView: View {
     private var infoGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             InfoCell(label: L10n.tr("item.field.category"), value: item.categoryDisplayName, icon: item.categoryIcon)
-            InfoCell(label: L10n.tr("item.field.year_purchased"), value: YearFormatter.display(item.yearPurchased), icon: "calendar")
-            InfoCell(label: L10n.tr("item.field.purchase_price"), value: CurrencyFormatter.format(item.purchasePrice, for: item, config: config), icon: "eurosign")
+            InfoCell(label: L10n.tr("item.field.year_purchased"), value: YearFormatter.display(date: item.purchaseDate), icon: "calendar")
+            InfoCell(label: L10n.tr("item.field.purchase_price"), value: CurrencyFormatter.format(item.purchasePrice, for: item, config: config), icon: "banknote")
             InfoCell(label: L10n.tr("item.field.serial_number"),
                      value: item.serialNumber.isEmpty ? L10n.placeholderDash : item.serialNumber,
                      icon: "number")

@@ -11,7 +11,7 @@ final class Item {
     var purchasePrice: Double
     var estimatedValue: Double
     var aiEstimate: Double?
-    var yearPurchased: Int
+    var purchaseDate: Date
     var serialNumber: String
     var notes: String
     var createdAt: Date
@@ -31,7 +31,7 @@ final class Item {
         purchasePrice: Double = 0,
         estimatedValue: Double = 0,
         aiEstimate: Double? = nil,
-        yearPurchased: Int = YearFormatter.currentYear,
+        purchaseDate: Date = YearFormatter.currentDate,
         serialNumber: String = "",
         notes: String = "",
         createdAt: Date = Date()
@@ -44,7 +44,7 @@ final class Item {
         self.purchasePrice = purchasePrice
         self.estimatedValue = estimatedValue
         self.aiEstimate = aiEstimate
-        self.yearPurchased = yearPurchased
+        self.purchaseDate = purchaseDate
         self.serialNumber = serialNumber
         self.notes = notes
         self.createdAt = createdAt
@@ -54,6 +54,10 @@ final class Item {
 
     var isDocumented: Bool {
         !photos.isEmpty && !documents.isEmpty
+    }
+
+    var yearPurchased: Int {
+        YearFormatter.year(from: purchaseDate)
     }
 
     var categoryDisplayName: String {

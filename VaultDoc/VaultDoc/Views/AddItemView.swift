@@ -17,7 +17,7 @@ struct AddItemView: View {
     @State private var currency = ""
     @State private var purchasePrice = ""
     @State private var estimatedValue = ""
-    @State private var yearPurchased = YearFormatter.currentYear
+    @State private var purchaseDate = YearFormatter.currentDate
     @State private var serialNumber = ""
     @State private var notes = ""
 
@@ -76,10 +76,11 @@ struct AddItemView: View {
                             .keyboardType(.decimalPad)
                     }
 
-                    Stepper(
-                        L10n.format("item.field.year_format", Int64(yearPurchased)),
-                        value: $yearPurchased,
-                        in: 1900...YearFormatter.currentYear
+                    DatePicker(
+                        L10n.tr("item.field.year_purchased"),
+                        selection: $purchaseDate,
+                        in: ...Date(),
+                        displayedComponents: .date
                     )
                     TextField(L10n.tr("item.field.serial_number"), text: $serialNumber)
                     TextField(L10n.tr("item.field.notes"), text: $notes, axis: .vertical)
@@ -204,11 +205,12 @@ struct AddItemView: View {
                     currency = config.defaultCurrencyCode
                     purchasePrice = item.purchasePrice > 0 ? String(item.purchasePrice) : ""
                     estimatedValue = item.estimatedValue > 0 ? String(item.estimatedValue) : ""
-                    yearPurchased = item.yearPurchased
+                    purchaseDate = item.purchaseDate
                     serialNumber = item.serialNumber
                     notes = item.notes
                 } else {
                     currency = config.defaultCurrencyCode
+                    purchaseDate = YearFormatter.currentDate
                 }
             }
             .onChange(of: config.defaultCurrencyCode) { _, newCode in
@@ -237,7 +239,7 @@ struct AddItemView: View {
                     purchasePrice: purchase,
                     estimatedValue: declared,
                     aiEstimate: existing.aiEstimate,
-                    yearPurchased: yearPurchased,
+                    yearPurchased: YearFormatter.year(from: purchaseDate),
                     serialNumber: serialNumber,
                     notes: notes,
                     createdAt: existing.createdAt
@@ -250,7 +252,7 @@ struct AddItemView: View {
                 existing.currency = currency
                 existing.purchasePrice = purchase
                 existing.estimatedValue = declared
-                existing.yearPurchased = yearPurchased
+                existing.purchaseDate = purchaseDate
                 existing.serialNumber = serialNumber
                 existing.notes = notes
 
@@ -293,7 +295,7 @@ struct AddItemView: View {
                     purchasePrice: purchase,
                     estimatedValue: declared,
                     aiEstimate: nil,
-                    yearPurchased: yearPurchased,
+                    yearPurchased: YearFormatter.year(from: purchaseDate),
                     serialNumber: serialNumber,
                     notes: notes,
                     createdAt: now
@@ -310,7 +312,7 @@ struct AddItemView: View {
                     currency: currency,
                     purchasePrice: purchase,
                     estimatedValue: declared,
-                    yearPurchased: yearPurchased,
+                    purchaseDate: purchaseDate,
                     serialNumber: serialNumber,
                     notes: notes,
                     createdAt: now

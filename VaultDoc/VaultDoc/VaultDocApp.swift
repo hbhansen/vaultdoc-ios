@@ -53,18 +53,19 @@ struct VaultDocApp: App {
                 let minimumDisplayTask = Task {
                     try? await Task.sleep(for: .seconds(1.2))
                 }
-                await AuthService.shared.restoreSession()
+                AuthService.shared.refreshBiometricAvailability()
                 await AppConfigStore.shared.refresh(
                     supabaseURL: Config.Supabase.url,
                     supabaseKey: Config.Supabase.anonKey
                 )
-                if AuthService.shared.isAuthenticated {
-                    await AppConfigStore.shared.syncDefaultCurrency(userId: AuthService.shared.userId)
-                }
                 await minimumDisplayTask.value
                 withAnimation(.easeOut(duration: 0.45)) {
                     showsOpeningSplash = false
                 }
+            }
+            .task(id: AuthService.shared.isAuthenticated) {
+                guard AuthService.shared.isAuthenticated else { return }
+                await AppConfigStore.shared.syncDefaultCurrency(userId: AuthService.shared.userId)
             }
         }
         .modelContainer(sharedModelContainer)

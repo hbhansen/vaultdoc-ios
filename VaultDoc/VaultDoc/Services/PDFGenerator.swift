@@ -105,7 +105,7 @@ struct PDFGenerator {
     private static func drawDetailsGrid(in rect: CGRect, ctx: CGContext, item: Item, y: CGFloat) -> CGFloat {
         let fields: [(String, String)] = [
             (L10n.tr("item.field.category"), item.categoryDisplayName),
-            (L10n.tr("item.field.year_purchased"), YearFormatter.display(item.yearPurchased)),
+            (L10n.tr("item.field.year_purchased"), YearFormatter.display(date: item.purchaseDate)),
             (L10n.tr("item.field.purchase_price"), CurrencyFormatter.format(item.purchasePrice, code: item.currency)),
             (L10n.tr("item.field.serial_number"), item.serialNumber.isEmpty ? L10n.placeholderDash : item.serialNumber),
             (L10n.tr("item.field.notes"), item.notes.isEmpty ? L10n.placeholderDash : item.notes)

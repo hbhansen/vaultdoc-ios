@@ -5,10 +5,13 @@ class AuthService {
     static let shared = AuthService()
 
     var isAuthenticated = false
+    var hasStoredSession = false
+    var canUseBiometricLogin = false
     var userId: String = ""
     var userEmail: String = ""
     var isLoading = false
     var errorMessage: String?
+    var biometricButtonTitle = BiometricAuthService.BiometricType.none.buttonTitle
 
     private init() {
         // Load cached user info synchronously so userId is available before restoreSession completes
@@ -17,20 +20,43 @@ class AuthService {
            KeychainHelper.shared.load(forKey: KeychainHelper.supabaseRefreshToken) != nil {
             userId = id
             userEmail = email
+            hasStoredSession = true
             // Don't set isAuthenticated yet — wait for token refresh in restoreSession()
         }
+        refreshBiometricAvailability()
     }
 
     // MARK: - Session Restore (called on app launch)
 
     func restoreSession() async {
         guard let refreshToken = KeychainHelper.shared.load(forKey: KeychainHelper.supabaseRefreshToken) else {
+            hasStoredSession = false
+            refreshBiometricAvailability()
             return
         }
         do {
             try await refreshSession(with: refreshToken)
         } catch {
             clearSession()
+        }
+    }
+
+    func refreshBiometricAvailability() {
+        let biometricType = BiometricAuthService.biometricType()
+        biometricButtonTitle = biometricType.buttonTitle
+        canUseBiometricLogin = hasStoredSession && biometricType != .none
+    }
+
+    func signInWithBiometrics() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            try await BiometricAuthService.authenticate()
+            await restoreSession()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -98,9 +124,11 @@ class AuthService {
         KeychainHelper.shared.save(response.user.id, forKey: KeychainHelper.supabaseUserId)
         KeychainHelper.shared.save(response.user.email, forKey: KeychainHelper.supabaseUserEmail)
 
+        hasStoredSession = true
         userId = response.user.id
         userEmail = response.user.email
         isAuthenticated = true
+        refreshBiometricAvailability()
     }
 
     private func clearSession() {
@@ -110,8 +138,11 @@ class AuthService {
         KeychainHelper.shared.delete(forKey: KeychainHelper.supabaseUserEmail)
 
         isAuthenticated = false
+        hasStoredSession = false
+        canUseBiometricLogin = false
         userId = ""
         userEmail = ""
+        biometricButtonTitle = BiometricAuthService.BiometricType.none.buttonTitle
     }
 
     private func postJSON<T: Decodable>(url: URL, body: [String: String]) async throws -> T {
