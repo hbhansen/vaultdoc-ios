@@ -6,8 +6,6 @@ struct SettingsView: View {
     @Environment(AppConfigStore.self) private var config
     @Environment(AuthService.self) private var auth
 
-    @State private var apiKey = ""
-    @State private var isAPIKeyVisible = false
     @State private var showShareSheet = false
     @State private var pdfData: Data?
     @State private var defaultCurrencyCode = ""
@@ -38,33 +36,6 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Account")
-                }
-
-                // MARK: Anthropic
-                Section {
-                    HStack {
-                        if isAPIKeyVisible {
-                            TextField("sk-ant-...", text: $apiKey)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                        } else {
-                            SecureField("sk-ant-...", text: $apiKey)
-                        }
-                        Button {
-                            isAPIKeyVisible.toggle()
-                        } label: {
-                            Image(systemName: isAPIKeyVisible ? "eye.slash" : "eye")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    Button("Save API Key") {
-                        KeychainHelper.shared.save(apiKey, forKey: KeychainHelper.anthropicAPIKey)
-                    }
-                    .disabled(apiKey.isEmpty)
-                } header: {
-                    Text("Anthropic API Key")
-                } footer: {
-                    Text("Required for AI value estimates. Stored securely in the device keychain.")
                 }
 
                 // MARK: Current config
@@ -145,7 +116,6 @@ struct SettingsView: View {
                 }
             }
             .onAppear {
-                apiKey = KeychainHelper.shared.load(forKey: KeychainHelper.anthropicAPIKey) ?? ""
                 defaultCurrencyCode = config.defaultCurrencyCode
             }
             .onChange(of: defaultCurrencyCode) { _, newCode in
@@ -183,9 +153,9 @@ struct PrivacyPolicyView: View {
                         .font(.headline)
                     Text("VaultDoc accesses your camera and photo library only to capture and attach photos to your items. Photos are stored locally on your device.")
 
-                    Text("API Key")
+                    Text("AI Estimates")
                         .font(.headline)
-                    Text("Your Anthropic API key is stored securely in the device Keychain and is never transmitted or stored outside your device, except to authenticate with the Anthropic API.")
+                    Text("VaultDoc sends item details to the Anthropic API when you request an AI estimate. The API key is managed in app configuration, not by end users in Settings.")
 
                     Text("Contact")
                         .font(.headline)

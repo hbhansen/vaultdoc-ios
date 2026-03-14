@@ -51,8 +51,6 @@ struct KeychainHelper {
 }
 
 extension KeychainHelper {
-    static let anthropicAPIKey = "anthropicAPIKey"
-
     // Supabase Auth
     static let supabaseAccessToken = "supabase_access_token"
     static let supabaseRefreshToken = "supabase_refresh_token"

@@ -7,8 +7,8 @@ struct AnthropicService {
         purchasePrice: Double,
         year: Int
     ) async throws -> Double {
-        guard let apiKey = KeychainHelper.shared.load(forKey: KeychainHelper.anthropicAPIKey),
-              !apiKey.isEmpty else {
+        let apiKey = Config.Anthropic.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !apiKey.isEmpty else {
             throw AnthropicError.missingAPIKey
         }
 
@@ -63,7 +63,7 @@ enum AnthropicError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey: return "No API key set. Add your Anthropic API key in Settings."
+        case .missingAPIKey: return "Anthropic API key is missing from app configuration."
         case .apiError: return "API request failed."
         case .parseError: return "Could not parse AI response."
         }
