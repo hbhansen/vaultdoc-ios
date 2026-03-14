@@ -665,6 +665,23 @@
         }
       }
     },
+    "item_detail.estimate_coming" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-vurderingsfunktion kommer snart"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI estimate feature coming soon"
+          }
+        }
+      }
+    },
     "item_detail.estimate_error" : {
       "extractionState" : "stale",
       "localizations" : {

@@ -130,7 +130,13 @@ struct ItemDetailView: View {
                     .font(.caption2).bold()
                     .foregroundStyle(.secondary)
                 if viewModel.isRequestingEstimate {
-                    ProgressView()
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(L10n.tr("item_detail.estimate_coming"))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 } else if let ai = item.aiEstimate {
                     Text(CurrencyFormatter.format(ai, for: item, config: config))
                         .font(.title2).bold()
