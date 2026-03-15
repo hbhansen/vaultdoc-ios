@@ -25,8 +25,15 @@ struct SupabaseDataService {
         try await delete(url: url)
     }
 
+    static func fetchItems(inventoryId: String) async throws -> [ItemPayload] {
+        let encodedInventoryId = inventoryId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? inventoryId
+        let url = URL(string: "\(baseURL)/rest/v1/items?inventory_id=eq.\(encodedInventoryId)&order=created_at.desc")!
+        return try await get(url: url)
+    }
+
     static func fetchItems(userId: String) async throws -> [ItemPayload] {
-        let url = URL(string: "\(baseURL)/rest/v1/items?user_id=eq.\(userId)&order=created_at.desc")!
+        let encodedUserId = userId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userId
+        let url = URL(string: "\(baseURL)/rest/v1/items?user_id=eq.\(encodedUserId)&order=created_at.desc")!
         return try await get(url: url)
     }
 
@@ -70,9 +77,8 @@ struct SupabaseDataService {
 
     // MARK: - Storage (binary file upload/download)
 
-    static func uploadFile(userId: String, itemId: UUID, fileId: UUID, filename: String, data: Data, contentType: String) async throws -> String {
-        // Use lowercased UUIDs to match Supabase auth.uid() format
-        let path = "\(userId)/\(itemId.uuidString.lowercased())/\(fileId.uuidString.lowercased())_\(filename)"
+    static func uploadFile(inventoryId: String, itemId: UUID, fileId: UUID, filename: String, data: Data, contentType: String) async throws -> String {
+        let path = "\(inventoryId)/\(itemId.uuidString.lowercased())/\(fileId.uuidString.lowercased())_\(filename)"
         guard let encodedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               let url = URL(string: "\(baseURL)/storage/v1/object/\(bucketName)/\(encodedPath)") else {
             print("[SupabaseDataService] Upload failed: could not build URL for path: \(path)")
@@ -145,21 +151,44 @@ struct SupabaseDataService {
 
     // MARK: - Full Sync
 
-    static func fetchAllUserData(userId: String) async throws -> ([ItemPayload], [PhotoPayload], [DocPayload]) {
-        let items = try await fetchItems(userId: userId)
+    static func fetchAllUserData(inventoryId: String) async throws -> ([ItemPayload], [PhotoPayload], [DocPayload]) {
+        let items = try await fetchItems(inventoryId: inventoryId)
         let itemIds = items.map(\.id)
 
-        async let photos = fetchPhotos(itemIds: itemIds)
-        async let docs = fetchDocuments(itemIds: itemIds)
+        async let photosResult: [PhotoPayload] = {
+            do {
+                return try await fetchPhotos(itemIds: itemIds)
+            } catch {
+                print("[SupabaseDataService] Shared sync warning: failed to fetch photo records: \(error)")
+                return []
+            }
+        }()
 
-        return try await (items, photos, docs)
+        async let docsResult: [DocPayload] = {
+            do {
+                return try await fetchDocuments(itemIds: itemIds)
+            } catch {
+                print("[SupabaseDataService] Shared sync warning: failed to fetch document records: \(error)")
+                return []
+            }
+        }()
+
+        return await (items, photosResult, docsResult)
     }
 
     // MARK: - User Profile
 
     static func fetchUserProfile(userId: String) async throws -> UserProfilePayload? {
         let encodedUserId = userId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? userId
-        let url = URL(string: "\(baseURL)/rest/v1/profiles?id=eq.\(encodedUserId)&select=id,default_currency")!
+        let url = URL(string: "\(baseURL)/rest/v1/profiles?id=eq.\(encodedUserId)&select=id,email,default_currency,inventory_id")!
+        let profiles: [UserProfilePayload] = try await get(url: url)
+        return profiles.first
+    }
+
+    static func fetchUserProfile(email: String) async throws -> UserProfilePayload? {
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let encodedEmail = normalizedEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? normalizedEmail
+        let url = URL(string: "\(baseURL)/rest/v1/profiles?email=eq.\(encodedEmail)&select=id,email,default_currency,inventory_id")!
         let profiles: [UserProfilePayload] = try await get(url: url)
         return profiles.first
     }
@@ -188,6 +217,31 @@ struct SupabaseDataService {
         let profiles = try decoder.decode([UserProfilePayload].self, from: data)
         guard let first = profiles.first else { throw DataServiceError.emptyResponse }
         return first
+    }
+
+    static func fetchInventoryMembers(inventoryId: String) async throws -> [InventoryMemberPayload] {
+        let encodedInventoryId = inventoryId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? inventoryId
+        let url = URL(string: "\(baseURL)/rest/v1/profiles?inventory_id=eq.\(encodedInventoryId)&select=id,email&order=email.asc")!
+        return try await get(url: url)
+    }
+
+    static func fetchPendingInventoryInvites(email: String) async throws -> [InventoryInvitePayload] {
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let encodedEmail = normalizedEmail.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? normalizedEmail
+        let url = URL(
+            string: "\(baseURL)/rest/v1/inventory_invites?invited_email=eq.\(encodedEmail)&status=eq.pending&order=created_at.desc"
+        )!
+        return try await get(url: url)
+    }
+
+    static func createInventoryInvite(_ payload: InventoryInvitePayload) async throws -> InventoryInvitePayload {
+        let url = URL(string: "\(baseURL)/rest/v1/inventory_invites")!
+        return try await postJSON(url: url, body: payload)
+    }
+
+    static func updateInventoryInvite(_ payload: InventoryInvitePayload) async throws -> InventoryInvitePayload {
+        let url = URL(string: "\(baseURL)/rest/v1/inventory_invites?id=eq.\(payload.id.uuidString)")!
+        return try await patchJSON(url: url, body: payload)
     }
 
     // MARK: - Private Helpers
@@ -361,6 +415,7 @@ struct SupabaseDataService {
 struct ItemPayload: Codable {
     var id: UUID
     var userId: String
+    var inventoryId: String
     var name: String
     var category: String
     var currency: String
@@ -391,7 +446,24 @@ struct DocPayload: Codable {
 
 struct UserProfilePayload: Codable {
     var id: String
+    var email: String?
     var defaultCurrency: String?
+    var inventoryId: String?
+}
+
+struct InventoryMemberPayload: Codable, Identifiable {
+    var id: String
+    var email: String?
+}
+
+struct InventoryInvitePayload: Codable, Identifiable {
+    var id: UUID
+    var inventoryId: String
+    var invitedEmail: String
+    var invitedByUserId: String
+    var invitedByEmail: String
+    var status: String
+    var createdAt: Date
 }
 
 // MARK: - Date Formatter

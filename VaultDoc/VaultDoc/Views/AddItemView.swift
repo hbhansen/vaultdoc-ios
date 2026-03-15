@@ -232,7 +232,8 @@ struct AddItemView: View {
                 // MARK: Update existing item
                 let payload = ItemPayload(
                     id: existing.id,
-                    userId: auth.userId,
+                    userId: existing.userId,
+                    inventoryId: existing.inventoryId,
                     name: name,
                     category: category,
                     currency: currency,
@@ -257,7 +258,7 @@ struct AddItemView: View {
                 existing.notes = notes
 
                 // Upload new photos
-                let uploadedPhotos = try await uploadPhotos(for: existing.id)
+                let uploadedPhotos = try await uploadPhotos(for: existing.id, inventoryId: existing.inventoryId)
                 for uploadedPhoto in uploadedPhotos {
                     let photo = ItemPhoto(
                         id: uploadedPhoto.id,
@@ -270,7 +271,7 @@ struct AddItemView: View {
                 }
 
                 // Upload new documents
-                let uploadedDocuments = try await uploadDocuments(for: existing.id)
+                let uploadedDocuments = try await uploadDocuments(for: existing.id, inventoryId: existing.inventoryId)
                 for uploadedDocument in uploadedDocuments {
                     let document = ItemDocument(
                         id: uploadedDocument.id,
@@ -286,9 +287,11 @@ struct AddItemView: View {
                 // MARK: Create new item
                 let itemId = UUID()
                 let now = Date()
+                let inventoryId = try await resolvedInventoryId()
                 let payload = ItemPayload(
                     id: itemId,
                     userId: auth.userId,
+                    inventoryId: inventoryId,
                     name: name,
                     category: category,
                     currency: currency,
@@ -307,6 +310,7 @@ struct AddItemView: View {
                 let item = Item(
                     id: itemId,
                     userId: auth.userId,
+                    inventoryId: inventoryId,
                     name: name,
                     category: category,
                     currency: currency,
@@ -320,7 +324,7 @@ struct AddItemView: View {
                 modelContext.insert(item)
 
                 // Upload photos
-                let uploadedPhotos = try await uploadPhotos(for: itemId)
+                let uploadedPhotos = try await uploadPhotos(for: itemId, inventoryId: inventoryId)
                 for uploadedPhoto in uploadedPhotos {
                     let photo = ItemPhoto(
                         id: uploadedPhoto.id,
@@ -333,7 +337,7 @@ struct AddItemView: View {
                 }
 
                 // Upload documents
-                let uploadedDocuments = try await uploadDocuments(for: itemId)
+                let uploadedDocuments = try await uploadDocuments(for: itemId, inventoryId: inventoryId)
                 for uploadedDocument in uploadedDocuments {
                     let document = ItemDocument(
                         id: uploadedDocument.id,
@@ -374,15 +378,35 @@ struct AddItemView: View {
         }
     }
 
-    private func uploadPhotos(for itemId: UUID) async throws -> [(id: UUID, data: Data, storagePath: String)] {
-        try await withThrowingTaskGroup(of: (Int, UUID, Data, String)?.self) { group in
+    private func resolvedInventoryId() async throws -> String {
+        if let existingItem {
+            return existingItem.inventoryId
+        }
+
+        if let currentInventoryId = auth.currentUserProfile?.inventoryId, !currentInventoryId.isEmpty {
+            return currentInventoryId
+        }
+
+        if let profile = try await SupabaseDataService.fetchUserProfile(userId: auth.userId),
+           let inventoryId = profile.inventoryId,
+           !inventoryId.isEmpty {
+            auth.currentUserProfile = profile
+            auth.currentInventoryId = inventoryId
+            return inventoryId
+        }
+
+        return auth.effectiveInventoryId
+    }
+
+    private func uploadPhotos(for itemId: UUID, inventoryId: String) async throws -> [(id: UUID, data: Data, storagePath: String)] {
+        return try await withThrowingTaskGroup(of: (Int, UUID, Data, String)?.self) { group in
             for (index, image) in capturedImages.enumerated() {
                 group.addTask {
                     guard let data = ImageCompressor.compress(image) else { return nil }
 
                     let photoId = UUID()
                     let storagePath = try await SupabaseDataService.uploadFile(
-                        userId: auth.userId,
+                        inventoryId: inventoryId,
                         itemId: itemId,
                         fileId: photoId,
                         filename: "photo.jpg",
@@ -413,13 +437,13 @@ struct AddItemView: View {
         }
     }
 
-    private func uploadDocuments(for itemId: UUID) async throws -> [(id: UUID, filename: String, data: Data, storagePath: String)] {
-        try await withThrowingTaskGroup(of: (Int, UUID, String, Data, String).self) { group in
+    private func uploadDocuments(for itemId: UUID, inventoryId: String) async throws -> [(id: UUID, filename: String, data: Data, storagePath: String)] {
+        return try await withThrowingTaskGroup(of: (Int, UUID, String, Data, String).self) { group in
             for (index, document) in attachedDocuments.enumerated() {
                 group.addTask {
                     let documentId = UUID()
                     let storagePath = try await SupabaseDataService.uploadFile(
-                        userId: auth.userId,
+                        inventoryId: inventoryId,
                         itemId: itemId,
                         fileId: documentId,
                         filename: document.filename,

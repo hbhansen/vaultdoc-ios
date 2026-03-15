@@ -57,7 +57,7 @@ struct ItemDetailView: View {
                         let uploadData = ImageCompressor.downsampledImage(data: imageData, maxDimension: 2_048)?
                             .jpegData(compressionQuality: 0.8) ?? imageData
                         let storagePath = try await SupabaseDataService.uploadFile(
-                            userId: auth.userId, itemId: item.id, fileId: photoId,
+                            inventoryId: item.inventoryId, itemId: item.id, fileId: photoId,
                             filename: "photo.jpg", data: uploadData, contentType: "image/jpeg"
                         )
                         let payload = PhotoPayload(id: photoId, itemId: item.id, storagePath: storagePath, capturedAt: Date())

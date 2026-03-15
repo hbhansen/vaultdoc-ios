@@ -6,7 +6,7 @@ struct ContentView: View {
 
     var body: some View {
         if auth.isAuthenticated {
-            VaultListView(userId: auth.userId)
+            VaultListView()
         } else {
             AuthView()
         }

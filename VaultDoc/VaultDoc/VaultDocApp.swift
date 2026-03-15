@@ -30,7 +30,7 @@ struct VaultDocApp: App {
             ZStack {
                 Group {
                     if AuthService.shared.isAuthenticated {
-                        VaultListView(userId: AuthService.shared.userId)
+                        VaultListView()
                     } else {
                         AuthView()
                     }
@@ -65,6 +65,7 @@ struct VaultDocApp: App {
             }
             .task(id: AuthService.shared.isAuthenticated) {
                 guard AuthService.shared.isAuthenticated else { return }
+                await AuthService.shared.refreshUserContext()
                 await AppConfigStore.shared.syncDefaultCurrency(userId: AuthService.shared.userId)
             }
         }

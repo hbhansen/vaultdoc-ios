@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     let items: [Item]
+    var onInventoryChanged: () async -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @Environment(AppConfigStore.self) private var config
     @Environment(AuthService.self) private var auth
@@ -12,6 +13,10 @@ struct SettingsView: View {
     @State private var defaultCurrencyCode = ""
     @State private var isSavingCurrency = false
     @State private var settingsError: String?
+    @State private var inviteEmail = ""
+    @State private var isSendingInvite = false
+    @State private var isApplyingInvite = false
+    @State private var sharingStatus: String?
 
     var body: some View {
         NavigationStack {
@@ -39,6 +44,68 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text(L10n.tr("settings.account"))
+                }
+
+                Section {
+                    if auth.inventoryMembers.isEmpty {
+                        Text("Your inventory is currently private.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(auth.inventoryMembers) { member in
+                            HStack {
+                                Image(systemName: member.id == auth.userId ? "person.crop.circle.badge.checkmark" : "person.2.fill")
+                                    .foregroundStyle(.teal)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(member.email ?? member.id)
+                                    if member.id == auth.userId {
+                                        Text("You")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    TextField("Family member email", text: $inviteEmail)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+
+                    Button {
+                        Task {
+                            await sendInventoryInvite()
+                        }
+                    } label: {
+                        Label("Send family invite", systemImage: "person.badge.plus")
+                    }
+                    .disabled(isSendingInvite || inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    if !auth.pendingInventoryInvites.isEmpty {
+                        ForEach(auth.pendingInventoryInvites) { invite in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(invite.invitedByEmail)
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Invited you to join a shared family inventory.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Button {
+                                    Task {
+                                        await accept(invite: invite)
+                                    }
+                                } label: {
+                                    Label("Accept invite", systemImage: "checkmark.circle.fill")
+                                }
+                                .disabled(isApplyingInvite)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                } header: {
+                    Text("Shared Inventory")
+                } footer: {
+                    Text("Invited family members can add items to the same inventory after they accept the invite.")
                 }
 
                 // MARK: Current config
@@ -85,6 +152,14 @@ struct SettingsView: View {
                         Text(settingsError)
                             .font(.caption)
                             .foregroundStyle(.red)
+                    }
+                }
+
+                if let sharingStatus {
+                    Section {
+                        Text(sharingStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -140,6 +215,9 @@ struct SettingsView: View {
             }
             .onAppear {
                 defaultCurrencyCode = config.defaultCurrencyCode
+                Task {
+                    await auth.refreshUserContext()
+                }
             }
             .onChange(of: defaultCurrencyCode) { _, newCode in
                 guard !newCode.isEmpty, !auth.userId.isEmpty else { return }
@@ -166,6 +244,123 @@ struct SettingsView: View {
     private func exportAll() {
         pdfData = PDFGenerator.generateAll(items: items)
         showShareSheet = true
+    }
+
+    private func sendInventoryInvite() async {
+        let normalizedEmail = inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedEmail.isEmpty else { return }
+        guard normalizedEmail != auth.userEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else {
+            settingsError = "Use another family member's email."
+            return
+        }
+
+        isSendingInvite = true
+        settingsError = nil
+        sharingStatus = nil
+
+        do {
+            let profile: UserProfilePayload?
+            if let currentProfile = auth.currentUserProfile {
+                profile = currentProfile
+            } else {
+                profile = try await SupabaseDataService.fetchUserProfile(userId: auth.userId)
+            }
+            let inventoryId = profile?.inventoryId ?? auth.effectiveInventoryId
+            let existingProfile = try await SupabaseDataService.fetchUserProfile(email: normalizedEmail)
+
+            if existingProfile?.inventoryId == inventoryId {
+                sharingStatus = "\(normalizedEmail) is already in this inventory."
+                isSendingInvite = false
+                return
+            }
+
+            let pendingInvites = try await SupabaseDataService.fetchPendingInventoryInvites(email: normalizedEmail)
+            if pendingInvites.contains(where: { $0.inventoryId == inventoryId }) {
+                sharingStatus = "An invite is already pending for \(normalizedEmail)."
+                isSendingInvite = false
+                return
+            }
+
+            let invite = InventoryInvitePayload(
+                id: UUID(),
+                inventoryId: inventoryId,
+                invitedEmail: normalizedEmail,
+                invitedByUserId: auth.userId,
+                invitedByEmail: auth.userEmail,
+                status: "pending",
+                createdAt: Date()
+            )
+            _ = try await SupabaseDataService.createInventoryInvite(invite)
+            inviteEmail = ""
+            sharingStatus = "Invite sent to \(normalizedEmail)."
+            await auth.refreshUserContext()
+        } catch {
+            settingsError = error.localizedDescription
+        }
+
+        isSendingInvite = false
+    }
+
+    private func accept(invite: InventoryInvitePayload) async {
+        isApplyingInvite = true
+        settingsError = nil
+        sharingStatus = nil
+
+        do {
+            let profile: UserProfilePayload?
+            if let currentProfile = auth.currentUserProfile {
+                profile = currentProfile
+            } else {
+                profile = try await SupabaseDataService.fetchUserProfile(userId: auth.userId)
+            }
+            try await migrateOwnedItems(to: invite.inventoryId)
+            let payload = UserProfilePayload(
+                id: auth.userId,
+                email: auth.userEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                defaultCurrency: profile?.defaultCurrency,
+                inventoryId: invite.inventoryId
+            )
+            _ = try await SupabaseDataService.upsertUserProfile(payload)
+
+            var acceptedInvite = invite
+            acceptedInvite.status = "accepted"
+            _ = try await SupabaseDataService.updateInventoryInvite(acceptedInvite)
+
+            await auth.refreshUserContext()
+            await onInventoryChanged()
+            sharingStatus = "You are now sharing the family inventory."
+        } catch {
+            settingsError = error.localizedDescription
+        }
+
+        isApplyingInvite = false
+    }
+
+    private func migrateOwnedItems(to inventoryId: String) async throws {
+        let ownedItems = try await SupabaseDataService.fetchItems(userId: auth.userId)
+        let itemsToMove = ownedItems.filter { $0.inventoryId != inventoryId }
+
+        guard !itemsToMove.isEmpty else { return }
+
+        try await withThrowingTaskGroup(of: UUID.self) { group in
+            for item in itemsToMove {
+                group.addTask {
+                    var updatedItem = item
+                    updatedItem.inventoryId = inventoryId
+                    _ = try await SupabaseDataService.updateItem(id: item.id, updatedItem)
+                    return item.id
+                }
+            }
+
+            var movedIds = Set<UUID>()
+            for try await movedId in group {
+                movedIds.insert(movedId)
+            }
+
+            for item in items where movedIds.contains(item.id) {
+                item.inventoryId = inventoryId
+            }
+        }
     }
 }
 

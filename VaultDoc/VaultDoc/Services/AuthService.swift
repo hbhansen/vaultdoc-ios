@@ -9,9 +9,17 @@ class AuthService {
     var canUseBiometricLogin = false
     var userId: String = ""
     var userEmail: String = ""
+    var currentInventoryId: String = ""
+    var currentUserProfile: UserProfilePayload?
+    var inventoryMembers: [InventoryMemberPayload] = []
+    var pendingInventoryInvites: [InventoryInvitePayload] = []
     var isLoading = false
     var errorMessage: String?
     var biometricButtonTitle = BiometricAuthService.BiometricType.none.buttonTitle
+
+    var effectiveInventoryId: String {
+        currentInventoryId.isEmpty ? userId : currentInventoryId
+    }
 
     private init() {
         // Load cached user info synchronously so userId is available before restoreSession completes
@@ -36,6 +44,7 @@ class AuthService {
         }
         do {
             try await refreshSession(with: refreshToken)
+            await refreshUserContext()
         } catch {
             clearSession()
         }
@@ -72,6 +81,7 @@ class AuthService {
             let body = ["email": email, "password": password]
             let response: AuthResponse = try await postJSON(url: url, body: body)
             handleAuthResponse(response)
+            await refreshUserContext()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -89,6 +99,7 @@ class AuthService {
             let body = ["email": email, "password": password]
             let response: AuthResponse = try await postJSON(url: url, body: body)
             handleAuthResponse(response)
+            await refreshUserContext()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -116,6 +127,40 @@ class AuthService {
         handleAuthResponse(response)
     }
 
+    func refreshUserContext() async {
+        guard isAuthenticated, !userId.isEmpty else { return }
+
+        do {
+            let normalizedEmail = userEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let profile: UserProfilePayload
+            if let existingProfile = try await SupabaseDataService.fetchUserProfile(userId: userId) {
+                profile = existingProfile
+            } else {
+                let payload = UserProfilePayload(
+                    id: userId,
+                    email: normalizedEmail,
+                    defaultCurrency: nil,
+                    inventoryId: userId
+                )
+                profile = try await SupabaseDataService.upsertUserProfile(payload)
+            }
+            currentUserProfile = profile
+            currentInventoryId = profile.inventoryId ?? userId
+
+            async let members = SupabaseDataService.fetchInventoryMembers(inventoryId: currentInventoryId)
+            async let invites = SupabaseDataService.fetchPendingInventoryInvites(email: normalizedEmail)
+
+            inventoryMembers = try await members
+            pendingInventoryInvites = try await invites
+        } catch {
+            errorMessage = error.localizedDescription
+            currentUserProfile = nil
+            currentInventoryId = userId
+            inventoryMembers = []
+            pendingInventoryInvites = []
+        }
+    }
+
     // MARK: - Helpers
 
     private func handleAuthResponse(_ response: AuthResponse) {
@@ -127,6 +172,10 @@ class AuthService {
         hasStoredSession = true
         userId = response.user.id
         userEmail = response.user.email
+        currentInventoryId = ""
+        currentUserProfile = nil
+        inventoryMembers = []
+        pendingInventoryInvites = []
         isAuthenticated = true
         refreshBiometricAvailability()
     }
@@ -142,6 +191,10 @@ class AuthService {
         canUseBiometricLogin = false
         userId = ""
         userEmail = ""
+        currentInventoryId = ""
+        currentUserProfile = nil
+        inventoryMembers = []
+        pendingInventoryInvites = []
         biometricButtonTitle = BiometricAuthService.BiometricType.none.buttonTitle
     }
 

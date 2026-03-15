@@ -81,7 +81,13 @@ class AppConfigStore {
     func saveDefaultCurrency(userId: String) async throws {
         normalizeDefaultCurrency(userId: userId)
         persistDefaultCurrency(for: userId)
-        let payload = UserProfilePayload(id: userId, defaultCurrency: defaultCurrencyCode)
+        let existingProfile = try await SupabaseDataService.fetchUserProfile(userId: userId)
+        let payload = UserProfilePayload(
+            id: userId,
+            email: existingProfile?.email,
+            defaultCurrency: defaultCurrencyCode,
+            inventoryId: existingProfile?.inventoryId ?? userId
+        )
         _ = try await SupabaseDataService.upsertUserProfile(payload)
     }
 
@@ -101,6 +107,7 @@ class AppConfigStore {
                 ItemPayload(
                     id: item.id,
                     userId: item.userId,
+                    inventoryId: item.inventoryId,
                     name: item.name,
                     category: item.category,
                     currency: code,

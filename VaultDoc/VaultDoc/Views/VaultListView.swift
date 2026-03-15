@@ -6,29 +6,25 @@ struct VaultListView: View {
     @Environment(AppConfigStore.self) private var config
     @Environment(AuthService.self) private var auth
     @Environment(LanguageSettings.self) private var language
-    @Query private var items: [Item]
+    @Query(sort: \Item.createdAt, order: .reverse) private var items: [Item]
     @State private var viewModel = VaultViewModel()
     @State private var showAddItem = false
     @State private var showSettings = false
     @State private var isSyncing = false
     @State private var deleteError: String?
 
-    init(userId: String) {
-        _items = Query(
-            filter: #Predicate<Item> { item in
-                item.userId == userId
-            },
-            sort: \Item.createdAt,
-            order: .reverse
-        )
+    private var visibleItems: [Item] {
+        items.filter { $0.inventoryId == auth.effectiveInventoryId }
     }
 
-    var filtered: [Item] { viewModel.filteredItems(items) }
+    private var filtered: [Item] {
+        viewModel.filteredItems(visibleItems)
+    }
 
     var body: some View {
         NavigationStack {
             Group {
-                if items.isEmpty {
+                if visibleItems.isEmpty {
                     emptyState
                 } else {
                     listContent
@@ -59,7 +55,10 @@ struct VaultListView: View {
                 AddItemView()
             }
             .sheet(isPresented: $showSettings) {
-                SettingsView(items: items)
+                SettingsView(items: visibleItems) {
+                    await auth.refreshUserContext()
+                    await syncFromSupabase()
+                }
             }
             .alert(L10n.tr("vault.delete_error"), isPresented: .constant(deleteError != nil)) {
                 Button(L10n.tr("common.ok")) { deleteError = nil }
@@ -67,6 +66,11 @@ struct VaultListView: View {
                 Text(deleteError ?? "")
             }
             .task {
+                await auth.refreshUserContext()
+                await syncFromSupabase()
+            }
+            .task(id: auth.effectiveInventoryId) {
+                guard auth.isAuthenticated else { return }
                 await syncFromSupabase()
             }
             .brandBackground()
@@ -79,17 +83,32 @@ struct VaultListView: View {
         defer { isSyncing = false }
 
         do {
-            let (remoteItems, remotePhotos, remoteDocs) = try await SupabaseDataService.fetchAllUserData(userId: auth.userId)
-            let localIds = Set(items.map(\.id))
+            let (remoteItems, remotePhotos, remoteDocs) = try await SupabaseDataService.fetchAllUserData(
+                inventoryId: auth.effectiveInventoryId
+            )
+            let localById = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
             let photosByItemId = Dictionary(grouping: remotePhotos, by: \.itemId)
             let docsByItemId = Dictionary(grouping: remoteDocs, by: \.itemId)
 
             for remote in remoteItems {
-                if !localIds.contains(remote.id) {
-                    // Insert missing item locally
+                if let localItem = localById[remote.id] {
+                    localItem.userId = remote.userId
+                    localItem.inventoryId = remote.inventoryId
+                    localItem.name = remote.name
+                    localItem.category = remote.category
+                    localItem.currency = remote.currency
+                    localItem.purchasePrice = remote.purchasePrice
+                    localItem.estimatedValue = remote.estimatedValue
+                    localItem.aiEstimate = remote.aiEstimate
+                    localItem.purchaseDate = YearFormatter.date(fromYear: remote.yearPurchased)
+                    localItem.serialNumber = remote.serialNumber
+                    localItem.notes = remote.notes
+                    localItem.createdAt = remote.createdAt
+                } else {
                     let item = Item(
                         id: remote.id,
                         userId: remote.userId,
+                        inventoryId: remote.inventoryId,
                         name: remote.name,
                         category: remote.category,
                         currency: remote.currency,
@@ -127,10 +146,9 @@ struct VaultListView: View {
                 }
             }
 
-            // Remove local items that no longer exist on server
             let remoteIds = Set(remoteItems.map(\.id))
             for localItem in items {
-                if !remoteIds.contains(localItem.id) {
+                if localItem.inventoryId == auth.effectiveInventoryId, !remoteIds.contains(localItem.id) {
                     modelContext.delete(localItem)
                 }
             }
@@ -175,7 +193,7 @@ struct VaultListView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
 
-            if !items.isEmpty {
+            if !visibleItems.isEmpty {
                 Section {
                     ForEach(filtered) { item in
                         NavigationLink(destination: ItemDetailView(item: item)) {
@@ -217,14 +235,14 @@ struct VaultListView: View {
         HStack(spacing: 0) {
             StatCard(
                 title: L10n.tr("vault.stat.items"),
-                value: "\(items.count)",
+                value: "\(visibleItems.count)",
                 icon: "archivebox.fill"
             )
             Divider().frame(height: 50)
             StatCard(
                 title: L10n.tr("vault.stat.total_value"),
                 value: CurrencyFormatter.format(
-                    viewModel.totalDeclaredValue(items),
+                    viewModel.totalDeclaredValue(visibleItems),
                     code: config.defaultCurrencyCode,
                     symbol: config.currency(code: config.defaultCurrencyCode)?.symbol
                 ),
@@ -233,7 +251,7 @@ struct VaultListView: View {
             Divider().frame(height: 50)
             StatCard(
                 title: L10n.tr("vault.stat.documented"),
-                value: "\(viewModel.documentedCount(items))/\(items.count)",
+                value: "\(viewModel.documentedCount(visibleItems))/\(visibleItems.count)",
                 icon: "checkmark.seal.fill"
             )
         }

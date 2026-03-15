@@ -25,6 +25,7 @@ class ItemDetailViewModel {
                 let payload = ItemPayload(
                     id: item.id,
                     userId: item.userId,
+                    inventoryId: item.inventoryId,
                     name: item.name,
                     category: item.category,
                     currency: item.currency,

@@ -5,6 +5,7 @@ import SwiftData
 final class Item {
     var id: UUID
     var userId: String
+    var inventoryId: String
     var name: String
     var category: String
     var currency: String
@@ -25,6 +26,7 @@ final class Item {
     init(
         id: UUID = UUID(),
         userId: String = "",
+        inventoryId: String = "",
         name: String,
         category: String = "other",
         currency: String = "EUR",
@@ -38,6 +40,7 @@ final class Item {
     ) {
         self.id = id
         self.userId = userId
+        self.inventoryId = inventoryId
         self.name = name
         self.category = category
         self.currency = currency
