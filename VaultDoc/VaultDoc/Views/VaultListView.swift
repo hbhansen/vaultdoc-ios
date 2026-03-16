@@ -189,7 +189,7 @@ struct VaultListView: View {
 
     private var listContent: some View {
         List {
-            summaryHeader
+            vaultHero
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
 
@@ -199,6 +199,7 @@ struct VaultListView: View {
                         NavigationLink(destination: ItemDetailView(item: item)) {
                             ItemRow(item: item)
                         }
+                        .listRowBackground(Color.clear)
                     }
                     .onDelete { offsets in
                         let sourceItems = filtered
@@ -226,44 +227,67 @@ struct VaultListView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
         .searchable(text: $viewModel.searchText, prompt: L10n.tr("vault.search_prompt"))
         .background(Color.clear)
     }
 
-    private var summaryHeader: some View {
-        HStack(spacing: 0) {
-            StatCard(
-                title: L10n.tr("vault.stat.items"),
-                value: "\(visibleItems.count)",
-                icon: "archivebox.fill"
-            )
-            Divider().frame(height: 50)
-            StatCard(
-                title: L10n.tr("vault.stat.total_value"),
-                value: CurrencyFormatter.format(
-                    viewModel.totalDeclaredValue(visibleItems),
-                    code: config.defaultCurrencyCode,
-                    symbol: config.currency(code: config.defaultCurrencyCode)?.symbol
-                ),
-                icon: "eurosign.circle.fill"
-            )
-            Divider().frame(height: 50)
-            StatCard(
-                title: L10n.tr("vault.stat.documented"),
-                value: "\(viewModel.documentedCount(visibleItems))/\(visibleItems.count)",
-                icon: "checkmark.seal.fill"
-            )
+    private var vaultHero: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Collection overview")
+                    .font(.caption.weight(.bold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(BrandTheme.textSecondary)
+                    .tracking(1.2)
+                Text("A brighter read on what your vault is worth")
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(BrandTheme.textPrimary)
+            }
+
+            HStack(spacing: 12) {
+                StatCard(
+                    title: L10n.tr("vault.stat.items"),
+                    value: "\(visibleItems.count)",
+                    icon: "archivebox.fill",
+                    gradient: BrandTheme.sunburstGradient
+                )
+                StatCard(
+                    title: L10n.tr("vault.stat.total_value"),
+                    value: CurrencyFormatter.format(
+                        viewModel.totalDeclaredValue(visibleItems),
+                        code: config.defaultCurrencyCode,
+                        symbol: config.currency(code: config.defaultCurrencyCode)?.symbol
+                    ),
+                    icon: "eurosign.circle.fill",
+                    gradient: BrandTheme.coolAccentGradient
+                )
+                StatCard(
+                    title: L10n.tr("vault.stat.documented"),
+                    value: "\(viewModel.documentedCount(visibleItems))/\(visibleItems.count)",
+                    icon: "checkmark.seal.fill",
+                    gradient: BrandTheme.accentGradient
+                )
+            }
         }
-        .padding(.vertical, 8)
-        .background(BrandTheme.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(BrandTheme.border, lineWidth: 1)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [BrandTheme.elevatedSurface, BrandTheme.surface],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                )
         )
-        .cornerRadius(12)
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
     }
 }
 
@@ -271,23 +295,29 @@ struct StatCard: View {
     let title: String
     let value: String
     let icon: String
+    let gradient: LinearGradient
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
-                .foregroundStyle(BrandTheme.accentGradient)
-                .font(.title3)
+                .foregroundStyle(BrandTheme.backgroundTop)
+                .font(.headline)
+                .frame(width: 32, height: 32)
+                .background(.white.opacity(0.82), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             Text(value)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 15, weight: .black, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-                .foregroundStyle(BrandTheme.textPrimary)
+                .foregroundStyle(BrandTheme.backgroundTop)
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(BrandTheme.textSecondary)
+                .foregroundStyle(BrandTheme.backgroundTop.opacity(0.72))
+                .lineLimit(2)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .frame(minHeight: 110)
+        .background(gradient, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -300,15 +330,21 @@ struct ItemRow: View {
         HStack(spacing: 12) {
             if let photo = item.photos.first {
                 CachedDataImage(data: photo.imageData, cacheKey: photo.id.uuidString, maxDimension: 48)
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(BrandTheme.surface)
-                    .frame(width: 48, height: 48)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [BrandTheme.elevatedSurface, BrandTheme.surface],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 56, height: 56)
                     .overlay {
                         Image(systemName: item.categoryIcon)
-                            .foregroundStyle(BrandTheme.accentGradient)
+                            .foregroundStyle(BrandTheme.sunburstGradient)
                     }
             }
 
@@ -330,7 +366,16 @@ struct ItemRow: View {
                 .fill(item.isDocumented ? Color.green : Color.orange)
                 .frame(width: 8, height: 8)
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(BrandTheme.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(BrandTheme.border, lineWidth: 1)
+                )
+        )
     }
 }
 
@@ -340,9 +385,9 @@ struct CategoryBadge: View {
     var body: some View {
         Text(L10n.categoryName(category))
             .font(.caption2).bold()
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(BrandTheme.surface)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(BrandTheme.elevatedSurface)
             .foregroundStyle(BrandTheme.accentBright)
             .clipShape(Capsule())
     }

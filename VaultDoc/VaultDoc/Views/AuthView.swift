@@ -11,28 +11,9 @@ struct AuthView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 30) {
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(BrandTheme.accent.opacity(0.16))
-                                .frame(width: 104, height: 104)
-                            Circle()
-                                .stroke(BrandTheme.border, lineWidth: 1)
-                                .frame(width: 116, height: 116)
-                            Image(systemName: "archivebox.fill")
-                                .font(.system(size: 42, weight: .semibold))
-                                .foregroundStyle(BrandTheme.accentGradient)
-                        }
-                        Text(L10n.tr("app.name"))
-                            .font(.system(.largeTitle, design: .serif, weight: .bold))
-                            .foregroundStyle(BrandTheme.textPrimary)
-                        Text(L10n.tr("auth.subtitle"))
-                            .font(.subheadline)
-                            .foregroundStyle(BrandTheme.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 36)
+                VStack(spacing: 28) {
+                    heroHeader
+                        .padding(.top, 24)
 
                     VStack(spacing: 16) {
                         if auth.canUseBiometricLogin {
@@ -45,7 +26,7 @@ struct AuthView: View {
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
-                                    .background(BrandTheme.surface)
+                                    .background(BrandTheme.elevatedSurface)
                                     .foregroundStyle(BrandTheme.textPrimary)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -106,8 +87,8 @@ struct AuthView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(BrandTheme.accentGradient)
-                            .foregroundStyle(BrandTheme.backgroundBottom)
+                            .background(BrandTheme.sunburstGradient)
+                            .foregroundStyle(BrandTheme.backgroundTop)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         }
                         .disabled(email.isEmpty || password.isEmpty || auth.isLoading)
@@ -126,14 +107,73 @@ struct AuthView: View {
                     .padding(24)
                     .brandCard()
                     .padding(.horizontal, 20)
-
-                    Spacer(minLength: 28)
                 }
+                .padding(.bottom, 28)
             }
             .brandBackground()
             .onAppear {
                 auth.refreshBiometricAvailability()
             }
         }
+    }
+
+    private var heroHeader: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(BrandTheme.sunburstGradient)
+                        .frame(width: 92, height: 92)
+                    RoundedRectangle(cornerRadius: 36, style: .continuous)
+                        .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                        .frame(width: 108, height: 108)
+                    Image(systemName: "archivebox.fill")
+                        .font(.system(size: 38, weight: .bold))
+                        .foregroundStyle(BrandTheme.backgroundTop)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(isSignUp ? "Create your vault" : "Private proof, brightly organized")
+                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .foregroundStyle(BrandTheme.textPrimary)
+                    Text("Insure valuables, receipts, and family inventory with a sharper view.")
+                        .font(.footnote)
+                        .foregroundStyle(BrandTheme.textSecondary)
+                        .multilineTextAlignment(.trailing)
+                }
+                .frame(maxWidth: 190, alignment: .trailing)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.tr("app.name"))
+                    .font(.system(size: 38, weight: .black, design: .rounded))
+                    .foregroundStyle(BrandTheme.textPrimary)
+                Text(L10n.tr("auth.subtitle"))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(BrandTheme.textSecondary)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            BrandTheme.elevatedSurface,
+                            BrandTheme.surface.opacity(0.9)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 20)
     }
 }
