@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var inviteEmail = ""
     @State private var isSendingInvite = false
     @State private var isApplyingInvite = false
+    @State private var isRemovingAccess = false
     @State private var sharingStatus: String?
 
     var body: some View {
@@ -47,24 +48,36 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    if auth.inventoryMembers.isEmpty {
+                    if sharedAccessEntries.isEmpty {
                         Text("Your inventory is currently private.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(auth.inventoryMembers) { member in
-                            HStack {
-                                Image(systemName: member.id == auth.userId ? "person.crop.circle.badge.checkmark" : "person.2.fill")
-                                    .foregroundStyle(.teal)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(member.email ?? member.id)
-                                    if member.id == auth.userId {
-                                        Text("You")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
+                        ForEach(sharedAccessEntries) { entry in
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: entry.status == .accepted ? "person.crop.circle.badge.checkmark" : "clock.badge")
+                                    .foregroundStyle(entry.status == .accepted ? .teal : .orange)
+                                    .frame(width: 20)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(entry.email)
+                                    Text(entry.status.title)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
                                 }
+
+                                Spacer()
+
+                                Button(role: .destructive) {
+                                    Task {
+                                        await removeAccess(for: entry)
+                                    }
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                                .disabled(isRemovingAccess)
                             }
+                            .padding(.vertical, 4)
                         }
                     }
 
@@ -246,6 +259,40 @@ struct SettingsView: View {
         showShareSheet = true
     }
 
+    private var sharedAccessEntries: [SharedAccessEntry] {
+        var entriesByID: [String: SharedAccessEntry] = [:]
+
+        for member in auth.inventoryMembers where member.id != auth.userId {
+            let email = member.email ?? member.id
+            entriesByID[email.lowercased()] = SharedAccessEntry(
+                id: email.lowercased(),
+                email: email,
+                status: .accepted,
+                invite: nil,
+                member: member
+            )
+        }
+
+        for invite in auth.sharedInventoryInvites {
+            let id = invite.invitedEmail.lowercased()
+            let member = auth.inventoryMembers.first { ($0.email ?? "").lowercased() == id }
+            entriesByID[id] = SharedAccessEntry(
+                id: id,
+                email: invite.invitedEmail,
+                status: invite.status == "accepted" ? .accepted : .pending,
+                invite: invite,
+                member: member
+            )
+        }
+
+        return entriesByID.values.sorted { lhs, rhs in
+            if lhs.status != rhs.status {
+                return lhs.status.sortOrder < rhs.status.sortOrder
+            }
+            return lhs.email.localizedCaseInsensitiveCompare(rhs.email) == .orderedAscending
+        }
+    }
+
     private func sendInventoryInvite() async {
         let normalizedEmail = inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalizedEmail.isEmpty else { return }
@@ -336,6 +383,47 @@ struct SettingsView: View {
         isApplyingInvite = false
     }
 
+    private func removeAccess(for entry: SharedAccessEntry) async {
+        isRemovingAccess = true
+        settingsError = nil
+        sharingStatus = nil
+
+        defer { isRemovingAccess = false }
+
+        do {
+            if let invite = entry.invite {
+                if invite.status == "accepted" {
+                    try await revokeAcceptedAccess(for: entry)
+                }
+                try await SupabaseDataService.deleteInventoryInvite(id: invite.id)
+            } else {
+                try await revokeAcceptedAccess(for: entry)
+            }
+
+            await auth.refreshUserContext()
+            await onInventoryChanged()
+            sharingStatus = "Access removed for \(entry.email)."
+        } catch {
+            settingsError = error.localizedDescription
+        }
+    }
+
+    private func revokeAcceptedAccess(for entry: SharedAccessEntry) async throws {
+        let profile: UserProfilePayload?
+        if let memberId = entry.member?.id {
+            profile = try await SupabaseDataService.fetchUserProfile(userId: memberId)
+        } else {
+            profile = try await SupabaseDataService.fetchUserProfile(email: entry.email)
+        }
+
+        guard var profile else {
+            throw DataServiceError.serverError("Could not find a profile for \(entry.email).")
+        }
+
+        profile.inventoryId = profile.id
+        _ = try await SupabaseDataService.upsertUserProfile(profile)
+    }
+
     private func migrateOwnedItems(to inventoryId: String) async throws {
         let ownedItems = try await SupabaseDataService.fetchItems(userId: auth.userId)
         let itemsToMove = ownedItems.filter { $0.inventoryId != inventoryId }
@@ -362,6 +450,37 @@ struct SettingsView: View {
             }
         }
     }
+}
+
+private struct SharedAccessEntry: Identifiable {
+    enum Status {
+        case accepted
+        case pending
+
+        var title: String {
+            switch self {
+            case .accepted:
+                return "Accepted"
+            case .pending:
+                return "Pending"
+            }
+        }
+
+        var sortOrder: Int {
+            switch self {
+            case .accepted:
+                return 0
+            case .pending:
+                return 1
+            }
+        }
+    }
+
+    let id: String
+    let email: String
+    let status: Status
+    let invite: InventoryInvitePayload?
+    let member: InventoryMemberPayload?
 }
 
 struct PrivacyPolicyView: View {

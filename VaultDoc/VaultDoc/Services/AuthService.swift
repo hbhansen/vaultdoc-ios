@@ -13,6 +13,7 @@ class AuthService {
     var currentUserProfile: UserProfilePayload?
     var inventoryMembers: [InventoryMemberPayload] = []
     var pendingInventoryInvites: [InventoryInvitePayload] = []
+    var sharedInventoryInvites: [InventoryInvitePayload] = []
     var isLoading = false
     var errorMessage: String?
     var biometricButtonTitle = BiometricAuthService.BiometricType.none.buttonTitle
@@ -149,15 +150,18 @@ class AuthService {
 
             async let members = SupabaseDataService.fetchInventoryMembers(inventoryId: currentInventoryId)
             async let invites = SupabaseDataService.fetchPendingInventoryInvites(email: normalizedEmail)
+            async let sharedInvites = SupabaseDataService.fetchInventoryInvites(inventoryId: currentInventoryId)
 
             inventoryMembers = try await members
             pendingInventoryInvites = try await invites
+            sharedInventoryInvites = try await sharedInvites
         } catch {
             errorMessage = error.localizedDescription
             currentUserProfile = nil
             currentInventoryId = userId
             inventoryMembers = []
             pendingInventoryInvites = []
+            sharedInventoryInvites = []
         }
     }
 
@@ -176,6 +180,7 @@ class AuthService {
         currentUserProfile = nil
         inventoryMembers = []
         pendingInventoryInvites = []
+        sharedInventoryInvites = []
         isAuthenticated = true
         refreshBiometricAvailability()
     }
@@ -195,6 +200,7 @@ class AuthService {
         currentUserProfile = nil
         inventoryMembers = []
         pendingInventoryInvites = []
+        sharedInventoryInvites = []
         biometricButtonTitle = BiometricAuthService.BiometricType.none.buttonTitle
     }
 

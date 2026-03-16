@@ -234,6 +234,14 @@ struct SupabaseDataService {
         return try await get(url: url)
     }
 
+    static func fetchInventoryInvites(inventoryId: String) async throws -> [InventoryInvitePayload] {
+        let encodedInventoryId = inventoryId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? inventoryId
+        let url = URL(
+            string: "\(baseURL)/rest/v1/inventory_invites?inventory_id=eq.\(encodedInventoryId)&status=in.(pending,accepted)&order=created_at.desc"
+        )!
+        return try await get(url: url)
+    }
+
     static func createInventoryInvite(_ payload: InventoryInvitePayload) async throws -> InventoryInvitePayload {
         let url = URL(string: "\(baseURL)/rest/v1/inventory_invites")!
         return try await postJSON(url: url, body: payload)
@@ -242,6 +250,11 @@ struct SupabaseDataService {
     static func updateInventoryInvite(_ payload: InventoryInvitePayload) async throws -> InventoryInvitePayload {
         let url = URL(string: "\(baseURL)/rest/v1/inventory_invites?id=eq.\(payload.id.uuidString)")!
         return try await patchJSON(url: url, body: payload)
+    }
+
+    static func deleteInventoryInvite(id: UUID) async throws {
+        let url = URL(string: "\(baseURL)/rest/v1/inventory_invites?id=eq.\(id.uuidString)")!
+        try await delete(url: url)
     }
 
     // MARK: - Private Helpers
