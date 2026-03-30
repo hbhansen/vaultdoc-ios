@@ -1,19 +1,19 @@
 import SwiftUI
 
 enum BrandTheme {
-    static let backgroundTop = Color(red: 0.05, green: 0.07, blue: 0.20)
-    static let backgroundMiddle = Color(red: 0.13, green: 0.06, blue: 0.25)
-    static let backgroundBottom = Color(red: 0.03, green: 0.10, blue: 0.16)
-    static let surface = Color.white.opacity(0.10)
-    static let elevatedSurface = Color.white.opacity(0.16)
-    static let border = Color.white.opacity(0.18)
-    static let textPrimary = Color(red: 0.98, green: 0.97, blue: 0.99)
-    static let textSecondary = Color(red: 0.76, green: 0.84, blue: 0.92)
-    static let accent = Color(red: 1.00, green: 0.45, blue: 0.38)
-    static let accentBright = Color(red: 1.00, green: 0.83, blue: 0.32)
-    static let accentCool = Color(red: 0.23, green: 0.84, blue: 0.92)
-    static let accentMuted = Color(red: 0.39, green: 0.28, blue: 0.84)
-    static let alert = Color(red: 0.86, green: 0.36, blue: 0.35)
+    static let backgroundTop = Color(red: 0.04, green: 0.07, blue: 0.13)
+    static let backgroundMiddle = Color(red: 0.07, green: 0.09, blue: 0.16)
+    static let backgroundBottom = Color(red: 0.09, green: 0.15, blue: 0.33)
+    static let surface = Color.white.opacity(0.08)
+    static let elevatedSurface = Color.white.opacity(0.14)
+    static let border = Color(red: 0.37, green: 0.45, blue: 0.57).opacity(0.35)
+    static let textPrimary = Color(red: 0.97, green: 0.98, blue: 0.99)
+    static let textSecondary = Color(red: 0.80, green: 0.84, blue: 0.88)
+    static let accent = Color(red: 0.11, green: 0.31, blue: 0.85)
+    static let accentBright = Color(red: 0.38, green: 0.65, blue: 0.98)
+    static let accentCool = Color(red: 0.08, green: 0.72, blue: 0.65)
+    static let accentMuted = Color(red: 0.20, green: 0.29, blue: 0.47)
+    static let alert = Color(red: 0.86, green: 0.15, blue: 0.15)
 
     static let backgroundGradient = LinearGradient(
         colors: [backgroundTop, backgroundMiddle, backgroundBottom],
@@ -28,7 +28,7 @@ enum BrandTheme {
     )
 
     static let coolAccentGradient = LinearGradient(
-        colors: [accentCool, Color.white.opacity(0.9)],
+        colors: [accentCool, accentBright.opacity(0.9)],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
@@ -41,8 +41,8 @@ enum BrandTheme {
 
     static let heroGradient = RadialGradient(
         colors: [
-            accentBright.opacity(0.46),
-            accent.opacity(0.22),
+            accentBright.opacity(0.28),
+            accent.opacity(0.18),
             .clear
         ],
         center: .topTrailing,
@@ -52,8 +52,8 @@ enum BrandTheme {
 
     static let secondaryGlow = RadialGradient(
         colors: [
-            accentCool.opacity(0.35),
-            accentMuted.opacity(0.16),
+            accentCool.opacity(0.18),
+            accentMuted.opacity(0.12),
             .clear
         ],
         center: .bottomLeading,
