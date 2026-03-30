@@ -29,7 +29,7 @@ struct VaultDocApp: App {
         WindowGroup {
             ZStack {
                 Group {
-                    if AuthService.shared.isAuthenticated {
+                    if AuthService.shared.showsAuthenticatedContent {
                         VaultListView()
                     } else {
                         AuthView()
@@ -49,6 +49,12 @@ struct VaultDocApp: App {
             .environment(languageSettings)
             .environment(\.locale, languageSettings.locale)
             .tint(BrandTheme.accent)
+            .onOpenURL { url in
+                AuthService.shared.recordIncomingURL(url)
+                Task {
+                    await AuthService.shared.handleIncomingURL(url)
+                }
+            }
             .task {
                 let minimumDisplayTask = Task {
                     try? await Task.sleep(for: .seconds(1.2))

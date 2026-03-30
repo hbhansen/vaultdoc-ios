@@ -1,8 +1,16 @@
 import Foundation
 
+@MainActor
 @Observable
 class AuthService {
     static let shared = AuthService()
+
+    enum AuthScreen {
+        case signIn
+        case forgotPassword
+        case resetPasswordLanding
+        case resetPassword
+    }
 
     var isAuthenticated = false
     var hasStoredSession = false
@@ -16,10 +24,22 @@ class AuthService {
     var sharedInventoryInvites: [InventoryInvitePayload] = []
     var isLoading = false
     var errorMessage: String?
+    var infoMessage: String?
+    var debugMessage: String?
     var biometricButtonTitle = BiometricAuthService.BiometricType.none.buttonTitle
+    var authScreen: AuthScreen = .signIn
+    var isPasswordRecoveryActive = false
+    var didCompletePasswordReset = false
+    var pendingPasswordRecoveryURL: URL?
+
+    let minimumPasswordLength = 8
 
     var effectiveInventoryId: String {
         currentInventoryId.isEmpty ? userId : currentInventoryId
+    }
+
+    var showsAuthenticatedContent: Bool {
+        isAuthenticated && !isPasswordRecoveryActive
     }
 
     private init() {
@@ -60,6 +80,7 @@ class AuthService {
     func signInWithBiometrics() async {
         isLoading = true
         errorMessage = nil
+        infoMessage = nil
         defer { isLoading = false }
 
         do {
@@ -75,6 +96,7 @@ class AuthService {
     func signUp(email: String, password: String) async {
         isLoading = true
         errorMessage = nil
+        infoMessage = nil
         defer { isLoading = false }
 
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -89,6 +111,7 @@ class AuthService {
             let body = ["email": normalizedEmail, "password": normalizedPassword]
             let response: AuthResponse = try await postJSON(url: url, body: body)
             handleAuthResponse(response)
+            authScreen = .signIn
             await refreshUserContext()
         } catch {
             errorMessage = error.localizedDescription
@@ -100,6 +123,7 @@ class AuthService {
     func signIn(email: String, password: String) async {
         isLoading = true
         errorMessage = nil
+        infoMessage = nil
         defer { isLoading = false }
 
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -114,10 +138,142 @@ class AuthService {
             let body = ["email": normalizedEmail, "password": normalizedPassword]
             let response: AuthResponse = try await postJSON(url: url, body: body)
             handleAuthResponse(response)
+            authScreen = .signIn
             await refreshUserContext()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    // MARK: - Password Reset
+
+    func showSignIn() {
+        authScreen = .signIn
+        errorMessage = nil
+        infoMessage = nil
+        debugMessage = nil
+        pendingPasswordRecoveryURL = nil
+    }
+
+    func showForgotPassword() {
+        authScreen = .forgotPassword
+        errorMessage = nil
+        infoMessage = nil
+        debugMessage = nil
+    }
+
+    func recordIncomingURL(_ url: URL) {
+        debugMessage = "Received link: \(url.absoluteString)"
+    }
+
+    func requestPasswordReset(email: String) async {
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedEmail.isEmpty else {
+            errorMessage = "Enter your email to reset your password."
+            infoMessage = nil
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+        infoMessage = nil
+        debugMessage = nil
+        defer { isLoading = false }
+
+        do {
+            try await SupabaseAuthService.requestPasswordReset(email: normalizedEmail)
+        } catch {
+            // Always show a generic success state so the flow never reveals account existence.
+        }
+
+        infoMessage = "If an account exists for that email, a password reset link has been sent."
+    }
+
+    func handleIncomingURL(_ url: URL) async {
+        guard SupabaseAuthService.isPasswordResetURL(url) else {
+            debugMessage = "Ignored non-reset link: \(url.absoluteString)"
+            return
+        }
+
+        errorMessage = nil
+        infoMessage = nil
+        isPasswordRecoveryActive = true
+        didCompletePasswordReset = false
+        pendingPasswordRecoveryURL = url
+        authScreen = .resetPasswordLanding
+        debugMessage = "Recovery link received. Continue to reset your password."
+    }
+
+    func beginPasswordRecovery() async {
+        guard let recoveryURL = pendingPasswordRecoveryURL else {
+            errorMessage = "This password reset link is missing required information."
+            authScreen = .signIn
+            isPasswordRecoveryActive = false
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+        infoMessage = nil
+        debugMessage = "Handling reset link…"
+        defer { isLoading = false }
+
+        do {
+            let session = try await SupabaseAuthService.completePasswordRecovery(from: recoveryURL)
+            applyRecoveredSession(session)
+            isPasswordRecoveryActive = true
+            didCompletePasswordReset = false
+            pendingPasswordRecoveryURL = nil
+            authScreen = .resetPassword
+            debugMessage = "Recovery session established for \(session.userEmail.isEmpty ? session.userId : session.userEmail)."
+            await refreshUserContext()
+        } catch {
+            errorMessage = error.localizedDescription
+            authScreen = .resetPasswordLanding
+            debugMessage = "Reset link handling failed: \(error.localizedDescription)"
+        }
+    }
+
+    func updateRecoveredPassword(newPassword: String, confirmPassword: String) async {
+        let normalizedPassword = newPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedConfirmation = confirmPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !normalizedPassword.isEmpty, !normalizedConfirmation.isEmpty else {
+            errorMessage = "Enter and confirm your new password."
+            return
+        }
+
+        guard normalizedPassword.count >= minimumPasswordLength else {
+            errorMessage = "Use at least \(minimumPasswordLength) characters for your new password."
+            return
+        }
+
+        guard normalizedPassword == normalizedConfirmation else {
+            errorMessage = "Passwords do not match."
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+        infoMessage = nil
+        defer { isLoading = false }
+
+        do {
+            try await SupabaseAuthService.updatePassword(to: normalizedPassword)
+            didCompletePasswordReset = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func finishPasswordResetFlow() {
+        errorMessage = nil
+        infoMessage = nil
+        didCompletePasswordReset = false
+        isPasswordRecoveryActive = false
+        pendingPasswordRecoveryURL = nil
+        authScreen = .signIn
+        debugMessage = nil
     }
 
     // MARK: - Sign Out
@@ -198,7 +354,31 @@ class AuthService {
         inventoryMembers = []
         pendingInventoryInvites = []
         sharedInventoryInvites = []
+        infoMessage = nil
+        debugMessage = nil
+        authScreen = .signIn
+        isPasswordRecoveryActive = false
+        didCompletePasswordReset = false
+        pendingPasswordRecoveryURL = nil
         biometricButtonTitle = BiometricAuthService.BiometricType.none.buttonTitle
+    }
+
+    private func applyRecoveredSession(_ session: PasswordRecoverySession) {
+        KeychainHelper.shared.save(session.accessToken, forKey: KeychainHelper.supabaseAccessToken)
+        KeychainHelper.shared.save(session.refreshToken, forKey: KeychainHelper.supabaseRefreshToken)
+        KeychainHelper.shared.save(session.userId, forKey: KeychainHelper.supabaseUserId)
+        KeychainHelper.shared.save(session.userEmail, forKey: KeychainHelper.supabaseUserEmail)
+
+        hasStoredSession = true
+        isAuthenticated = true
+        userId = session.userId
+        userEmail = session.userEmail
+        currentInventoryId = ""
+        currentUserProfile = nil
+        inventoryMembers = []
+        pendingInventoryInvites = []
+        sharedInventoryInvites = []
+        refreshBiometricAvailability()
     }
 
     private func postJSON<T: Decodable>(url: URL, body: [String: String]) async throws -> T {
