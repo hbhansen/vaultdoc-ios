@@ -11,6 +11,10 @@ enum Config {
     enum Anthropic {
         static let apiKey = ""
     }
-}
 
+    enum OpenAI {
+        static let apiKey = ""
+        static let model = "gpt-5"
+    }
+}
 

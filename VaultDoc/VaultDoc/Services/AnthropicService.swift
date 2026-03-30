@@ -1,6 +1,10 @@
 import Foundation
 
 struct AnthropicService {
+    static var isConfigured: Bool {
+        !Config.Anthropic.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     static func estimateValue(
         name: String,
         category: String,

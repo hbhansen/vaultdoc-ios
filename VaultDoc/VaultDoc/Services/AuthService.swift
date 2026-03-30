@@ -77,9 +77,16 @@ class AuthService {
         errorMessage = nil
         defer { isLoading = false }
 
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedEmail.isEmpty, !normalizedPassword.isEmpty else {
+            errorMessage = L10n.tr("auth.error.empty_credentials")
+            return
+        }
+
         do {
             let url = URL(string: "\(Config.Supabase.url)/auth/v1/signup")!
-            let body = ["email": email, "password": password]
+            let body = ["email": normalizedEmail, "password": normalizedPassword]
             let response: AuthResponse = try await postJSON(url: url, body: body)
             handleAuthResponse(response)
             await refreshUserContext()
@@ -95,9 +102,16 @@ class AuthService {
         errorMessage = nil
         defer { isLoading = false }
 
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedEmail.isEmpty, !normalizedPassword.isEmpty else {
+            errorMessage = L10n.tr("auth.error.empty_credentials")
+            return
+        }
+
         do {
             let url = URL(string: "\(Config.Supabase.url)/auth/v1/token?grant_type=password")!
-            let body = ["email": email, "password": password]
+            let body = ["email": normalizedEmail, "password": normalizedPassword]
             let response: AuthResponse = try await postJSON(url: url, body: body)
             handleAuthResponse(response)
             await refreshUserContext()
@@ -132,29 +146,12 @@ class AuthService {
         guard isAuthenticated, !userId.isEmpty else { return }
 
         do {
-            let normalizedEmail = userEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let profile: UserProfilePayload
-            if let existingProfile = try await SupabaseDataService.fetchUserProfile(userId: userId) {
-                profile = existingProfile
-            } else {
-                let payload = UserProfilePayload(
-                    id: userId,
-                    email: normalizedEmail,
-                    defaultCurrency: nil,
-                    inventoryId: userId
-                )
-                profile = try await SupabaseDataService.upsertUserProfile(payload)
-            }
-            currentUserProfile = profile
-            currentInventoryId = profile.inventoryId ?? userId
-
-            async let members = SupabaseDataService.fetchInventoryMembers(inventoryId: currentInventoryId)
-            async let invites = SupabaseDataService.fetchPendingInventoryInvites(email: normalizedEmail)
-            async let sharedInvites = SupabaseDataService.fetchInventoryInvites(inventoryId: currentInventoryId)
-
-            inventoryMembers = try await members
-            pendingInventoryInvites = try await invites
-            sharedInventoryInvites = try await sharedInvites
+            let context = try await CollaborationService.loadContext(userId: userId, email: userEmail)
+            currentUserProfile = context.profile
+            currentInventoryId = context.inventoryId
+            inventoryMembers = context.inventoryMembers
+            pendingInventoryInvites = context.pendingInvites
+            sharedInventoryInvites = context.sharedInvites
         } catch {
             errorMessage = error.localizedDescription
             currentUserProfile = nil
@@ -208,6 +205,7 @@ class AuthService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(Config.Supabase.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
 
@@ -217,10 +215,11 @@ class AuthService {
             throw AuthError.networkError
         }
 
-        guard http.statusCode == 200 else {
+        guard (200 ..< 300).contains(http.statusCode) else {
             if let errorResponse = try? JSONDecoder().decode(AuthErrorResponse.self, from: data) {
                 throw AuthError.serverError(
                     errorResponse.errorDescription
+                    ?? errorResponse.message
                     ?? errorResponse.msg
                     ?? L10n.format("auth.error.unknown_http", Int64(http.statusCode))
                 )
@@ -250,6 +249,7 @@ struct AuthUser: Decodable {
 struct AuthErrorResponse: Decodable {
     let error: String?
     let errorDescription: String?
+    let message: String?
     let msg: String?
 }
 

@@ -13,13 +13,8 @@ class ItemDetailViewModel {
         estimateError = nil
         Task {
             do {
-                let value = try await AnthropicService.estimateValue(
-                    name: item.name,
-                    category: item.category,
-                    purchasePrice: item.purchasePrice,
-                    year: item.yearPurchased
-                )
-                item.aiEstimate = value
+                let valuation = try await ValuationService.valuate(item: item)
+                item.aiEstimate = valuation.amount
 
                 // Persist AI estimate to Supabase
                 let payload = ItemPayload(
@@ -31,7 +26,7 @@ class ItemDetailViewModel {
                     currency: item.currency,
                     purchasePrice: item.purchasePrice,
                     estimatedValue: item.estimatedValue,
-                    aiEstimate: value,
+                    aiEstimate: valuation.amount,
                     yearPurchased: item.yearPurchased,
                     serialNumber: item.serialNumber,
                     notes: item.notes,

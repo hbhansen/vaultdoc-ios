@@ -2,64 +2,103 @@ import SwiftUI
 
 struct OpeningSplashView: View {
     var body: some View {
-        ZStack {
-            BrandTheme.backgroundGradient
-                .ignoresSafeArea()
+        GeometryReader { geometry in
+            let isCompactHeight = geometry.size.height < 760
+            let iconSize = isCompactHeight ? 118.0 : 144.0
+            let outerSize = isCompactHeight ? 180.0 : 216.0
 
-            BrandTheme.heroGradient
-                .ignoresSafeArea()
+            ZStack {
+                BrandTheme.backgroundGradient
+                    .ignoresSafeArea()
 
-            Circle()
-                .fill(BrandTheme.accent.opacity(0.28))
-                .frame(width: 340, height: 340)
-                .blur(radius: 44)
-                .offset(x: 120, y: -220)
+                BrandTheme.heroGradient
+                    .ignoresSafeArea()
 
-            Circle()
-                .fill(BrandTheme.accentCool.opacity(0.26))
-                .frame(width: 280, height: 280)
-                .blur(radius: 50)
-                .offset(x: -150, y: 260)
+                BrandTheme.secondaryGlow
+                    .ignoresSafeArea()
 
-            VStack(spacing: 28) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 34, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [BrandTheme.elevatedSurface, BrandTheme.surface],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                Circle()
+                    .fill(BrandTheme.accent.opacity(0.18))
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 56)
+                    .offset(x: geometry.size.width * 0.32, y: -geometry.size.height * 0.22)
+
+                Circle()
+                    .fill(BrandTheme.accentCool.opacity(0.12))
+                    .frame(width: 240, height: 240)
+                    .blur(radius: 54)
+                    .offset(x: -geometry.size.width * 0.28, y: geometry.size.height * 0.24)
+
+                VStack(spacing: isCompactHeight ? 24 : 32) {
+                    Spacer()
+
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.05))
+                            .frame(width: outerSize, height: outerSize)
+                            .overlay(
+                                Circle()
+                                    .stroke(.white.opacity(0.08), lineWidth: 1)
                             )
-                        )
-                        .frame(width: 164, height: 164)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 34, style: .continuous)
-                                .stroke(BrandTheme.border, lineWidth: 1)
-                        )
 
-                    Image(systemName: "archivebox.fill")
-                        .font(.system(size: 66, weight: .bold))
-                        .foregroundStyle(BrandTheme.sunburstGradient)
+                        Circle()
+                            .stroke(BrandTheme.accentGradient, lineWidth: 12)
+                            .frame(width: outerSize - 34, height: outerSize - 34)
+
+                        RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [BrandTheme.elevatedSurface, BrandTheme.surface],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: iconSize, height: iconSize)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                                    .stroke(BrandTheme.border, lineWidth: 1)
+                            )
+
+                        Image(systemName: "lock.document.fill")
+                            .font(.system(size: isCompactHeight ? 42 : 50, weight: .semibold))
+                            .foregroundStyle(BrandTheme.accentGradient)
+                    }
+                    .shadow(color: .black.opacity(0.26), radius: 28, y: 16)
+
+                    VStack(spacing: 12) {
+                        Text(L10n.tr("app.name"))
+                            .font(.system(size: isCompactHeight ? 34 : 40, weight: .black, design: .rounded))
+                            .foregroundStyle(BrandTheme.textPrimary)
+
+                        Text("Secure records for the moments that matter.")
+                            .font(.system(size: isCompactHeight ? 15 : 17, weight: .medium, design: .rounded))
+                            .foregroundStyle(BrandTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 320)
+                    }
+
+                    Spacer()
+
+                    VStack(spacing: 14) {
+                        Capsule()
+                            .fill(.white.opacity(0.10))
+                            .frame(width: 132, height: 5)
+                            .overlay(alignment: .leading) {
+                                Capsule()
+                                    .fill(BrandTheme.accentGradient)
+                                    .frame(width: 74, height: 5)
+                            }
+
+                        Text("Preparing your vault")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(BrandTheme.textSecondary)
+                            .tracking(0.3)
+                    }
                 }
-                .shadow(color: .black.opacity(0.28), radius: 24, y: 12)
-
-                VStack(spacing: 10) {
-                    Text(L10n.tr("app.name"))
-                        .font(.system(size: 40, weight: .black, design: .rounded))
-                        .foregroundStyle(BrandTheme.textPrimary)
-
-                    Text("Protect what proves ownership")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(BrandTheme.textSecondary)
-                        .tracking(0.8)
-                    
-                    Text("The app you did not know you needed until it matters")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(BrandTheme.textSecondary)
-                        .tracking(0.8)
-                        }
+                .padding(.horizontal, 28)
+                .padding(.vertical, isCompactHeight ? 36 : 52)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(32)
         }
     }
 }

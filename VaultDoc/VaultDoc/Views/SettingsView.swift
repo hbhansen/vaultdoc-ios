@@ -296,50 +296,20 @@ struct SettingsView: View {
     private func sendInventoryInvite() async {
         let normalizedEmail = inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalizedEmail.isEmpty else { return }
-        guard normalizedEmail != auth.userEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else {
-            settingsError = "Use another family member's email."
-            return
-        }
 
         isSendingInvite = true
         settingsError = nil
         sharingStatus = nil
 
         do {
-            let profile: UserProfilePayload?
-            if let currentProfile = auth.currentUserProfile {
-                profile = currentProfile
-            } else {
-                profile = try await SupabaseDataService.fetchUserProfile(userId: auth.userId)
-            }
-            let inventoryId = profile?.inventoryId ?? auth.effectiveInventoryId
-            let existingProfile = try await SupabaseDataService.fetchUserProfile(email: normalizedEmail)
-
-            if existingProfile?.inventoryId == inventoryId {
-                sharingStatus = "\(normalizedEmail) is already in this inventory."
-                isSendingInvite = false
-                return
-            }
-
-            let pendingInvites = try await SupabaseDataService.fetchPendingInventoryInvites(email: normalizedEmail)
-            if pendingInvites.contains(where: { $0.inventoryId == inventoryId }) {
-                sharingStatus = "An invite is already pending for \(normalizedEmail)."
-                isSendingInvite = false
-                return
-            }
-
-            let invite = InventoryInvitePayload(
-                id: UUID(),
-                inventoryId: inventoryId,
+            let invitedEmail = try await CollaborationService.sendInvite(
                 invitedEmail: normalizedEmail,
-                invitedByUserId: auth.userId,
-                invitedByEmail: auth.userEmail,
-                status: "pending",
-                createdAt: Date()
+                fromUserId: auth.userId,
+                fromUserEmail: auth.userEmail,
+                currentProfile: auth.currentUserProfile
             )
-            _ = try await SupabaseDataService.createInventoryInvite(invite)
             inviteEmail = ""
-            sharingStatus = "Invite sent to \(normalizedEmail)."
+            sharingStatus = "Invite sent to \(invitedEmail)."
             await auth.refreshUserContext()
         } catch {
             settingsError = error.localizedDescription
@@ -354,24 +324,13 @@ struct SettingsView: View {
         sharingStatus = nil
 
         do {
-            let profile: UserProfilePayload?
-            if let currentProfile = auth.currentUserProfile {
-                profile = currentProfile
-            } else {
-                profile = try await SupabaseDataService.fetchUserProfile(userId: auth.userId)
-            }
-            try await migrateOwnedItems(to: invite.inventoryId)
-            let payload = UserProfilePayload(
-                id: auth.userId,
-                email: auth.userEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
-                defaultCurrency: profile?.defaultCurrency,
-                inventoryId: invite.inventoryId
+            let inventoryId = try await CollaborationService.acceptInvite(
+                invite,
+                userId: auth.userId,
+                userEmail: auth.userEmail,
+                currentProfile: auth.currentUserProfile
             )
-            _ = try await SupabaseDataService.upsertUserProfile(payload)
-
-            var acceptedInvite = invite
-            acceptedInvite.status = "accepted"
-            _ = try await SupabaseDataService.updateInventoryInvite(acceptedInvite)
+            migrateLocalItems(to: inventoryId)
 
             await auth.refreshUserContext()
             await onInventoryChanged()
@@ -391,14 +350,11 @@ struct SettingsView: View {
         defer { isRemovingAccess = false }
 
         do {
-            if let invite = entry.invite {
-                if invite.status == "accepted" {
-                    try await revokeAcceptedAccess(for: entry)
-                }
-                try await SupabaseDataService.deleteInventoryInvite(id: invite.id)
-            } else {
-                try await revokeAcceptedAccess(for: entry)
-            }
+            try await CollaborationService.removeAccess(
+                email: entry.email,
+                memberId: entry.member?.id,
+                invite: entry.invite
+            )
 
             await auth.refreshUserContext()
             await onInventoryChanged()
@@ -408,46 +364,9 @@ struct SettingsView: View {
         }
     }
 
-    private func revokeAcceptedAccess(for entry: SharedAccessEntry) async throws {
-        let profile: UserProfilePayload?
-        if let memberId = entry.member?.id {
-            profile = try await SupabaseDataService.fetchUserProfile(userId: memberId)
-        } else {
-            profile = try await SupabaseDataService.fetchUserProfile(email: entry.email)
-        }
-
-        guard var profile else {
-            throw DataServiceError.serverError("Could not find a profile for \(entry.email).")
-        }
-
-        profile.inventoryId = profile.id
-        _ = try await SupabaseDataService.upsertUserProfile(profile)
-    }
-
-    private func migrateOwnedItems(to inventoryId: String) async throws {
-        let ownedItems = try await SupabaseDataService.fetchItems(userId: auth.userId)
-        let itemsToMove = ownedItems.filter { $0.inventoryId != inventoryId }
-
-        guard !itemsToMove.isEmpty else { return }
-
-        try await withThrowingTaskGroup(of: UUID.self) { group in
-            for item in itemsToMove {
-                group.addTask {
-                    var updatedItem = item
-                    updatedItem.inventoryId = inventoryId
-                    _ = try await SupabaseDataService.updateItem(id: item.id, updatedItem)
-                    return item.id
-                }
-            }
-
-            var movedIds = Set<UUID>()
-            for try await movedId in group {
-                movedIds.insert(movedId)
-            }
-
-            for item in items where movedIds.contains(item.id) {
-                item.inventoryId = inventoryId
-            }
+    private func migrateLocalItems(to inventoryId: String) {
+        for item in items where item.userId == auth.userId {
+            item.inventoryId = inventoryId
         }
     }
 }
