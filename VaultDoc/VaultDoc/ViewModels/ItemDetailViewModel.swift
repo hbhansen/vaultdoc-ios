@@ -9,12 +9,14 @@ class ItemDetailViewModel {
     var pdfData: Data? = nil
 
     func requestAIEstimate(for item: Item) {
+        guard !item.photos.isEmpty else { return }
         isRequestingEstimate = true
         estimateError = nil
         Task {
             do {
                 let valuation = try await ValuationService.valuate(item: item)
                 item.aiEstimate = valuation.amount
+                item.estimatedValue = valuation.amount
 
                 // Persist AI estimate to Supabase
                 let payload = ItemPayload(
@@ -25,7 +27,7 @@ class ItemDetailViewModel {
                     category: item.category,
                     currency: item.currency,
                     purchasePrice: item.purchasePrice,
-                    estimatedValue: item.estimatedValue,
+                    estimatedValue: valuation.amount,
                     aiEstimate: valuation.amount,
                     yearPurchased: item.yearPurchased,
                     serialNumber: item.serialNumber,

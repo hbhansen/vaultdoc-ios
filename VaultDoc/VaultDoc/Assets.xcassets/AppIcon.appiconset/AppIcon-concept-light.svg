@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- Light background: soft white-blue -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#EEF4FF"/>
+      <stop offset="100%" stop-color="#DAE8FF"/>
+    </linearGradient>
+
+    <!-- Document fill: deep navy/brand blue -->
+    <linearGradient id="docFill" x1="270" y1="185" x2="672" y2="718" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#1A3A9E"/>
+      <stop offset="100%" stop-color="#0F2260"/>
+    </linearGradient>
+
+    <!-- Dog-ear / fold: slightly lighter blue -->
+    <linearGradient id="foldFill" x1="584" y1="185" x2="672" y2="273" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#2A5ACD"/>
+      <stop offset="100%" stop-color="#1A3A9E"/>
+    </linearGradient>
+
+    <!-- Shield fill: brand blue → teal -->
+    <linearGradient id="shieldFill" x1="540" y1="495" x2="770" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#63A6FA"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+
+    <!-- Ambient blue tint (top-left) -->
+    <radialGradient id="tint1" cx="25%" cy="22%" r="40%">
+      <stop offset="0%"   stop-color="#63A6FA" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#63A6FA" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Ambient teal tint (bottom-right) -->
+    <radialGradient id="tint2" cx="78%" cy="78%" r="36%">
+      <stop offset="0%"   stop-color="#14B8A6" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#14B8A6" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Drop shadow for document -->
+    <filter id="docShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#1C4FD8" flood-opacity="0.18"/>
+    </filter>
+
+    <!-- Drop shadow for shield -->
+    <filter id="shieldShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="22" flood-color="#0A1222" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <!-- ─── Background ─── -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="220" fill="url(#tint1)"/>
+  <rect width="1024" height="1024" rx="220" fill="url(#tint2)"/>
+
+  <!-- ─── Document (solid dark blue, dog-eared corner) ─── -->
+  <g filter="url(#docShadow)">
+    <path d="M 270,185
+             L 584,185
+             L 672,273
+             L 672,718
+             L 270,718
+             Z"
+          fill="url(#docFill)"/>
+  </g>
+
+  <!-- Dog-ear fold triangle (lighter blue) -->
+  <path d="M 584,185 L 584,273 L 672,273 Z"
+        fill="url(#foldFill)"/>
+
+  <!-- Dog-ear crease line -->
+  <path d="M 584,185 L 584,273 L 672,273"
+        fill="none"
+        stroke="white" stroke-width="2" opacity="0.25"/>
+
+  <!-- ─── Document content lines (white, on dark doc) ─── -->
+  <!-- Line 1 -->
+  <line x1="326" y1="360" x2="612" y2="360"
+        stroke="white" stroke-width="17" stroke-linecap="round" opacity="0.55"/>
+  <!-- Line 2 -->
+  <line x1="326" y1="415" x2="590" y2="415"
+        stroke="white" stroke-width="15" stroke-linecap="round" opacity="0.40"/>
+  <!-- Line 3 -->
+  <line x1="326" y1="467" x2="566" y2="467"
+        stroke="white" stroke-width="15" stroke-linecap="round" opacity="0.40"/>
+  <!-- Line 4 -->
+  <line x1="326" y1="519" x2="490" y2="519"
+        stroke="white" stroke-width="15" stroke-linecap="round" opacity="0.25"/>
+
+  <!-- ─── Shield badge (lower-right, overlapping document) ─── -->
+  <path d="M 555,512
+           Q 555,495 572,495
+           L 753,495
+           Q 770,495 770,512
+           L 770,622
+           Q 770,722 660,785
+           Q 550,722 550,622
+           Z"
+        fill="url(#shieldFill)"
+        filter="url(#shieldShadow)"/>
+
+  <!-- Shield inner highlight -->
+  <path d="M 568,518
+           Q 568,508 578,508
+           L 742,508
+           Q 752,508 752,518
+           L 752,620
+           Q 752,710 660,768
+           Q 568,710 568,620
+           Z"
+        fill="none"
+        stroke="white" stroke-width="1.5" opacity="0.35"/>
+
+  <!-- ─── Lock icon inside shield ─── -->
+  <!-- Lock body -->
+  <rect x="622" y="632" width="76" height="72" rx="13"
+        fill="white" opacity="0.95"/>
+
+  <!-- Lock shackle -->
+  <path d="M 639,632
+           L 639,603
+           Q 639,581 660,581
+           Q 681,581 681,603
+           L 681,632"
+        fill="none"
+        stroke="white" stroke-width="14" stroke-linecap="round" opacity="0.95"/>
+
+  <!-- Keyhole circle -->
+  <circle cx="660" cy="660" r="10"
+          fill="url(#shieldFill)" opacity="0.90"/>
+
+  <!-- Keyhole slot -->
+  <rect x="656" y="660" width="8" height="17" rx="4"
+        fill="url(#shieldFill)" opacity="0.90"/>
+
+</svg>

@@ -111,7 +111,7 @@ struct CameraView: View {
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(BrandTheme.accentGradient)
-                    .foregroundStyle(BrandTheme.backgroundBottom)
+                    .foregroundStyle(BrandTheme.actionForeground)
                     .clipShape(Capsule())
             }
             Button(L10n.tr("common.cancel")) { dismiss() }

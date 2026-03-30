@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#0A1121"/>
+      <stop offset="100%" stop-color="#0D1830"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="200" y1="160" x2="820" y2="860" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#61A6FA"/>
+      <stop offset="55%"  stop-color="#1C4FD8"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="vGrad" x1="0" y1="290" x2="0" y2="650" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#61A6FA"/>
+      <stop offset="100%" stop-color="#13CFBC"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="38%" r="54%">
+      <stop offset="0%"   stop-color="#1C4FD8" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#0A1121" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pageFill" x1="0" y1="170" x2="0" y2="860" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.055"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.015"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="220" fill="url(#glow)"/>
+
+  <!-- Document page body (portrait, fold at top-right)
+       Overall rect: (310,170) → (714,858), corners r=24
+       Fold cut: top-right corner clipped at (614,170) → (714,270) -->
+  <path d="
+    M 334,170
+    L 614,170
+    L 714,270
+    L 714,834
+    Q 714,858 690,858
+    L 334,858
+    Q 310,858 310,834
+    L 310,194
+    Q 310,170 334,170
+    Z"
+    fill="url(#pageFill)"
+    stroke="url(#brand)"
+    stroke-width="9"
+    stroke-linejoin="round"
+    opacity="0.88"/>
+
+  <!-- Fold crease (inner corner lines of the folded flap) -->
+  <polyline points="614,170 614,270 714,270"
+    fill="none"
+    stroke="url(#brand)"
+    stroke-width="9"
+    stroke-linejoin="round"
+    opacity="0.55"/>
+
+  <!-- V monogram centred in page -->
+  <polyline points="378,292 512,622 646,292"
+    fill="none"
+    stroke="url(#vGrad)"
+    stroke-width="58"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <!-- Top cap lines -->
+  <line x1="342" y1="292" x2="414" y2="292"
+    stroke="url(#vGrad)" stroke-width="16" stroke-linecap="round" opacity="0.78"/>
+  <line x1="610" y1="292" x2="682" y2="292"
+    stroke="url(#vGrad)" stroke-width="16" stroke-linecap="round" opacity="0.78"/>
+
+  <!-- Lock mark below V tip — vault reference -->
+  <!-- Shackle (arch) -->
+  <path d="M 495,686 Q 495,656 512,656 Q 529,656 529,686"
+    fill="none"
+    stroke="url(#brand)"
+    stroke-width="10"
+    stroke-linecap="round"
+    opacity="0.85"/>
+  <!-- Lock body -->
+  <rect x="484" y="684" width="56" height="40" rx="10"
+    fill="none"
+    stroke="url(#brand)"
+    stroke-width="10"
+    opacity="0.85"/>
+  <!-- Keyhole dot -->
+  <circle cx="512" cy="704" r="5" fill="url(#brand)" opacity="0.70"/>
+
+  <!-- Subtle text lines at bottom of page -->
+  <line x1="358" y1="782" x2="596" y2="782"
+    stroke="url(#brand)" stroke-width="7" stroke-linecap="round" opacity="0.22"/>
+  <line x1="358" y1="810" x2="532" y2="810"
+    stroke="url(#brand)" stroke-width="7" stroke-linecap="round" opacity="0.22"/>
+</svg>

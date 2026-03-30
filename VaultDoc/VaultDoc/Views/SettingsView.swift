@@ -27,7 +27,7 @@ struct SettingsView: View {
                     HStack {
                         Image(systemName: "person.circle.fill")
                             .font(.title)
-                            .foregroundStyle(.teal)
+                            .foregroundStyle(BrandTheme.accentBright)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(L10n.tr("settings.signed_in_as"))
                                 .font(.caption)
@@ -56,7 +56,7 @@ struct SettingsView: View {
                         ForEach(sharedAccessEntries) { entry in
                             HStack(alignment: .top, spacing: 12) {
                                 Image(systemName: entry.status == .accepted ? "person.crop.circle.badge.checkmark" : "clock.badge")
-                                    .foregroundStyle(entry.status == .accepted ? .teal : .orange)
+                                    .foregroundStyle(entry.status == .accepted ? BrandTheme.accentCool : BrandTheme.accentBright)
                                     .frame(width: 20)
 
                                 VStack(alignment: .leading, spacing: 4) {
@@ -126,7 +126,7 @@ struct SettingsView: View {
                     ForEach(config.categories) { cat in
                         HStack {
                             Image(systemName: cat.icon ?? "archivebox")
-                                .foregroundStyle(.teal)
+                                .foregroundStyle(BrandTheme.accent)
                                 .frame(width: 24)
                             Text(L10n.categoryName(cat.name, fallback: cat.displayName))
                             Spacer()
@@ -149,7 +149,7 @@ struct SettingsView: View {
                         HStack {
                             Text(cur.symbol)
                                 .font(.headline)
-                                .foregroundStyle(.teal)
+                                .foregroundStyle(BrandTheme.accent)
                                 .frame(width: 32)
                             Text(L10n.currencyName(code: cur.code, fallback: cur.name))
                             Spacer()
@@ -164,7 +164,7 @@ struct SettingsView: View {
                     Section {
                         Text(settingsError)
                             .font(.caption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(BrandTheme.alert)
                     }
                 }
 

@@ -67,6 +67,10 @@ final class Item {
         L10n.categoryName(category)
     }
 
+    var valuationAmount: Double {
+        aiEstimate ?? estimatedValue
+    }
+
     var categoryIcon: String {
         switch category {
         case "jewellery":   return "sparkles"

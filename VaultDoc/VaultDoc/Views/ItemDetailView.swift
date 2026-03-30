@@ -67,6 +67,7 @@ struct ItemDetailView: View {
                         photo.item = item
                         modelContext.insert(photo)
                         item.photos.append(photo)
+                        viewModel.requestAIEstimate(for: item)
                     } catch {
                         photoUploadError = error.localizedDescription
                     }
@@ -83,6 +84,10 @@ struct ItemDetailView: View {
         } message: {
             Text(photoUploadError ?? "")
         }
+        .task(id: item.photos.count) {
+            guard item.aiEstimate == nil, !viewModel.isRequestingEstimate else { return }
+            viewModel.requestAIEstimate(for: item)
+        }
     }
 
     // MARK: - Photo Carousel
@@ -91,7 +96,7 @@ struct ItemDetailView: View {
         Group {
             if item.photos.isEmpty {
                 ZStack {
-                    Color.teal.opacity(0.1)
+                    BrandTheme.accentBright.opacity(0.10)
                         .overlay(BrandTheme.surface)
                     VStack(spacing: 8) {
                         Image(systemName: item.categoryIcon)
@@ -120,38 +125,42 @@ struct ItemDetailView: View {
     private var valueCard: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.tr("item_detail.declared_value_uppercase"))
+                Text("VALUATION")
                     .font(.caption2).bold()
                     .foregroundStyle(.secondary)
-                Text(CurrencyFormatter.format(item.estimatedValue, for: item, config: config))
-                    .font(.title2).bold()
-                    .foregroundStyle(BrandTheme.accentBright)
+                if viewModel.isRequestingEstimate && item.valuationAmount == 0 {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Analyzing photos")
+                            .font(.subheadline)
+                            .foregroundStyle(BrandTheme.textSecondary)
+                    }
+                } else if item.valuationAmount > 0 {
+                    Text(CurrencyFormatter.format(item.valuationAmount, for: item, config: config))
+                        .font(.title2).bold()
+                        .foregroundStyle(BrandTheme.accentBright)
+                } else {
+                    Text("Add photos to calculate")
+                        .font(.subheadline)
+                        .foregroundStyle(BrandTheme.textSecondary)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard !viewModel.isRequestingEstimate else { return }
+                viewModel.requestAIEstimate(for: item)
             }
             Spacer()
             Divider().frame(height: 40)
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
-                Text(L10n.tr("item_detail.ai_estimate_uppercase"))
+                Text(L10n.tr("item.field.purchase_price").uppercased())
                     .font(.caption2).bold()
                     .foregroundStyle(.secondary)
-                if viewModel.isRequestingEstimate {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(L10n.tr("item_detail.estimate_coming"))
-                            .font(.subheadline)
-                            .foregroundStyle(BrandTheme.textSecondary)
-                    }
-                } else if let ai = item.aiEstimate {
-                    Text(CurrencyFormatter.format(ai, for: item, config: config))
-                        .font(.title2).bold()
-                        .foregroundStyle(BrandTheme.accentGradient)
-                } else {
-                    Text(L10n.tr("item_detail.estimate_coming"))
-                        .font(.subheadline)
-                        .foregroundStyle(BrandTheme.textSecondary)
-                        .multilineTextAlignment(.trailing)
-                }
+                Text(CurrencyFormatter.format(item.purchasePrice, for: item, config: config))
+                    .font(.title2).bold()
+                    .foregroundStyle(BrandTheme.accentGradient)
             }
         }
         .padding()
@@ -269,7 +278,7 @@ struct ItemDetailView: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(BrandTheme.accentGradient)
-                    .foregroundStyle(BrandTheme.backgroundBottom)
+                    .foregroundStyle(BrandTheme.actionForeground)
                     .clipShape(Capsule())
             }
             .padding(.top, 4)

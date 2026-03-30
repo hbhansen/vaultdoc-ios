@@ -18,7 +18,7 @@ enum Config {
     }
 
     enum OpenAI {
-        static let apiKey = ""
+        static let apiKey = "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"
         static let model = "gpt-5"
     }
 }

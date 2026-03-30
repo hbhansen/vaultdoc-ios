@@ -34,36 +34,20 @@ struct OpeningSplashView: View {
 
                     ZStack {
                         Circle()
-                            .fill(.white.opacity(0.05))
+                            .fill(BrandTheme.elevatedSurface.opacity(0.65))
                             .frame(width: outerSize, height: outerSize)
                             .overlay(
                                 Circle()
-                                    .stroke(.white.opacity(0.08), lineWidth: 1)
-                            )
-
-                        Circle()
-                            .stroke(BrandTheme.accentGradient, lineWidth: 12)
-                            .frame(width: outerSize - 34, height: outerSize - 34)
-
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [BrandTheme.elevatedSurface, BrandTheme.surface],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: iconSize, height: iconSize)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 30, style: .continuous)
                                     .stroke(BrandTheme.border, lineWidth: 1)
                             )
 
-                        Image(systemName: "lock.document.fill")
-                            .font(.system(size: isCompactHeight ? 42 : 50, weight: .semibold))
-                            .foregroundStyle(BrandTheme.accentGradient)
+                        Circle()
+                            .stroke(BrandTheme.coolAccentGradient, lineWidth: 12)
+                            .frame(width: outerSize - 34, height: outerSize - 34)
+
+                        BrandMark(size: iconSize)
                     }
-                    .shadow(color: .black.opacity(0.26), radius: 28, y: 16)
+                    .shadow(color: BrandTheme.accent.opacity(0.16), radius: 28, y: 16)
 
                     VStack(spacing: 12) {
                         Text(L10n.tr("app.name"))

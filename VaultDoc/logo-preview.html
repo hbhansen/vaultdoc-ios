@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VaultDoc Logo Concepts</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    gap: 48px;
+  }
+  h1 {
+    color: #F7FAFE;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+  }
+  .row {
+    display: flex;
+    gap: 48px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .card label {
+    color: #CDD6E0;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    opacity: 0.70;
+  }
+  .icon-wrap {
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  }
+  .icon-wrap img, .icon-wrap svg {
+    display: block;
+    width: 256px;
+    height: 256px;
+  }
+  .icon-wrap-sm img, .icon-wrap-sm svg {
+    width: 60px;
+    height: 60px;
+    border-radius: 13px;
+  }
+  .small-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .size-label {
+    color: #CDD6E0;
+    font-size: 11px;
+    opacity: 0.50;
+    margin-top: 4px;
+    text-align: center;
+  }
+  .divider {
+    width: 1px;
+    height: 280px;
+    background: rgba(255,255,255,0.10);
+  }
+  .palette {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+</style>
+</head>
+<body>
+
+<h1>VaultDoc — New Logo Concepts</h1>
+
+<div class="row">
+
+  <!-- Dark variant -->
+  <div class="card">
+    <label>Dark variant</label>
+    <div class="icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="256" height="256">
+        <defs>
+          <linearGradient id="bg-d" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#0A1222"/>
+            <stop offset="55%"  stop-color="#0D1830"/>
+            <stop offset="100%" stop-color="#172150"/>
+          </linearGradient>
+          <linearGradient id="brand-d" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#63A6FA"/>
+            <stop offset="50%"  stop-color="#1C4FD8"/>
+            <stop offset="100%" stop-color="#14B8A6"/>
+          </linearGradient>
+          <linearGradient id="shieldFill-d" x1="540" y1="495" x2="770" y2="790" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#63A6FA"/>
+            <stop offset="100%" stop-color="#14B8A6"/>
+          </linearGradient>
+          <linearGradient id="docFill-d" x1="270" y1="185" x2="672" y2="718" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#1C4FD8" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#14B8A6" stop-opacity="0.07"/>
+          </linearGradient>
+          <radialGradient id="glow1-d" cx="30%" cy="28%" r="42%">
+            <stop offset="0%"   stop-color="#1C4FD8" stop-opacity="0.30"/>
+            <stop offset="100%" stop-color="#1C4FD8" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="glow2-d" cx="72%" cy="74%" r="38%">
+            <stop offset="0%"   stop-color="#14B8A6" stop-opacity="0.22"/>
+            <stop offset="100%" stop-color="#14B8A6" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="shSh-d">
+            <feDropShadow dx="0" dy="10" stdDeviation="22" flood-color="#000814" flood-opacity="0.55"/>
+          </filter>
+          <filter id="docGl-d">
+            <feDropShadow dx="0" dy="4" stdDeviation="14" flood-color="#1C4FD8" flood-opacity="0.25"/>
+          </filter>
+        </defs>
+        <rect width="1024" height="1024" rx="220" fill="url(#bg-d)"/>
+        <rect width="1024" height="1024" rx="220" fill="url(#glow1-d)"/>
+        <rect width="1024" height="1024" rx="220" fill="url(#glow2-d)"/>
+        <g filter="url(#docGl-d)">
+          <path d="M 270,185 L 584,185 L 672,273 L 672,718 L 270,718 Z"
+                fill="url(#docFill-d)" stroke="url(#brand-d)" stroke-width="5" stroke-opacity="0.80"/>
+        </g>
+        <path d="M 584,185 L 584,273 L 672,273" fill="none" stroke="url(#brand-d)" stroke-width="5" opacity="0.45"/>
+        <path d="M 584,185 L 584,273 L 672,273 Z" fill="url(#brand-d)" fill-opacity="0.18"/>
+        <line x1="326" y1="360" x2="612" y2="360" stroke="url(#brand-d)" stroke-width="17" stroke-linecap="round" opacity="0.50"/>
+        <line x1="326" y1="415" x2="590" y2="415" stroke="url(#brand-d)" stroke-width="15" stroke-linecap="round" opacity="0.36"/>
+        <line x1="326" y1="467" x2="566" y2="467" stroke="url(#brand-d)" stroke-width="15" stroke-linecap="round" opacity="0.36"/>
+        <line x1="326" y1="519" x2="490" y2="519" stroke="url(#brand-d)" stroke-width="15" stroke-linecap="round" opacity="0.22"/>
+        <path d="M 555,512 Q 555,495 572,495 L 753,495 Q 770,495 770,512 L 770,622 Q 770,722 660,785 Q 550,722 550,622 Z"
+              fill="url(#shieldFill-d)" filter="url(#shSh-d)"/>
+        <path d="M 568,518 Q 568,508 578,508 L 742,508 Q 752,508 752,518 L 752,620 Q 752,710 660,768 Q 568,710 568,620 Z"
+              fill="none" stroke="white" stroke-width="1.5" opacity="0.30"/>
+        <rect x="622" y="632" width="76" height="72" rx="13" fill="white" opacity="0.95"/>
+        <path d="M 639,632 L 639,603 Q 639,581 660,581 Q 681,581 681,603 L 681,632"
+              fill="none" stroke="white" stroke-width="14" stroke-linecap="round" opacity="0.95"/>
+        <circle cx="660" cy="660" r="10" fill="url(#shieldFill-d)" opacity="0.90"/>
+        <rect x="656" y="660" width="8" height="17" rx="4" fill="url(#shieldFill-d)" opacity="0.90"/>
+      </svg>
+    </div>
+    <div class="palette">
+      <div class="swatch" style="background:#0A1222;" title="Background top"></div>
+      <div class="swatch" style="background:#172150;" title="Background bottom"></div>
+      <div class="swatch" style="background:#63A6FA;" title="Accent bright"></div>
+      <div class="swatch" style="background:#1C4FD8;" title="Accent blue"></div>
+      <div class="swatch" style="background:#14B8A6;" title="Accent teal"></div>
+    </div>
+    <!-- Small size preview -->
+    <div class="small-row">
+      <div>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="60" height="60" style="border-radius:13px;display:block;">
+          <defs>
+            <linearGradient id="bg-ds" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#0A1222"/><stop offset="100%" stop-color="#172150"/>
+            </linearGradient>
+            <linearGradient id="brand-ds" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#63A6FA"/><stop offset="50%" stop-color="#1C4FD8"/><stop offset="100%" stop-color="#14B8A6"/>
+            </linearGradient>
+            <linearGradient id="sf-ds" x1="540" y1="495" x2="770" y2="790" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#63A6FA"/><stop offset="100%" stop-color="#14B8A6"/>
+            </linearGradient>
+            <linearGradient id="df-ds" x1="270" y1="185" x2="672" y2="718" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#1C4FD8" stop-opacity="0.18"/><stop offset="100%" stop-color="#14B8A6" stop-opacity="0.07"/>
+            </linearGradient>
+          </defs>
+          <rect width="1024" height="1024" rx="220" fill="url(#bg-ds)"/>
+          <path d="M 270,185 L 584,185 L 672,273 L 672,718 L 270,718 Z" fill="url(#df-ds)" stroke="url(#brand-ds)" stroke-width="5" stroke-opacity="0.80"/>
+          <path d="M 584,185 L 584,273 L 672,273 Z" fill="url(#brand-ds)" fill-opacity="0.18"/>
+          <line x1="326" y1="360" x2="612" y2="360" stroke="url(#brand-ds)" stroke-width="17" stroke-linecap="round" opacity="0.50"/>
+          <line x1="326" y1="415" x2="590" y2="415" stroke="url(#brand-ds)" stroke-width="15" stroke-linecap="round" opacity="0.36"/>
+          <line x1="326" y1="467" x2="566" y2="467" stroke="url(#brand-ds)" stroke-width="15" stroke-linecap="round" opacity="0.36"/>
+          <path d="M 555,512 Q 555,495 572,495 L 753,495 Q 770,495 770,512 L 770,622 Q 770,722 660,785 Q 550,722 550,622 Z" fill="url(#sf-ds)"/>
+          <rect x="622" y="632" width="76" height="72" rx="13" fill="white" opacity="0.95"/>
+          <path d="M 639,632 L 639,603 Q 639,581 660,581 Q 681,581 681,603 L 681,632" fill="none" stroke="white" stroke-width="14" stroke-linecap="round" opacity="0.95"/>
+          <circle cx="660" cy="660" r="10" fill="url(#sf-ds)" opacity="0.90"/>
+        </svg>
+        <div class="size-label">60pt</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Light variant -->
+  <div class="card">
+    <label>Light variant</label>
+    <div class="icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="256" height="256">
+        <defs>
+          <linearGradient id="bg-l" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#EEF4FF"/>
+            <stop offset="100%" stop-color="#DAE8FF"/>
+          </linearGradient>
+          <linearGradient id="docFill-l" x1="270" y1="185" x2="672" y2="718" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#1A3A9E"/>
+            <stop offset="100%" stop-color="#0F2260"/>
+          </linearGradient>
+          <linearGradient id="foldFill-l" x1="584" y1="185" x2="672" y2="273" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#2A5ACD"/>
+            <stop offset="100%" stop-color="#1A3A9E"/>
+          </linearGradient>
+          <linearGradient id="shieldFill-l" x1="540" y1="495" x2="770" y2="790" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#63A6FA"/>
+            <stop offset="100%" stop-color="#14B8A6"/>
+          </linearGradient>
+          <radialGradient id="tint1-l" cx="25%" cy="22%" r="40%">
+            <stop offset="0%"   stop-color="#63A6FA" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="#63A6FA" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="tint2-l" cx="78%" cy="78%" r="36%">
+            <stop offset="0%"   stop-color="#14B8A6" stop-opacity="0.14"/>
+            <stop offset="100%" stop-color="#14B8A6" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="docSh-l">
+            <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#1C4FD8" flood-opacity="0.18"/>
+          </filter>
+          <filter id="shSh-l">
+            <feDropShadow dx="0" dy="10" stdDeviation="22" flood-color="#0A1222" flood-opacity="0.28"/>
+          </filter>
+        </defs>
+        <rect width="1024" height="1024" rx="220" fill="url(#bg-l)"/>
+        <rect width="1024" height="1024" rx="220" fill="url(#tint1-l)"/>
+        <rect width="1024" height="1024" rx="220" fill="url(#tint2-l)"/>
+        <g filter="url(#docSh-l)">
+          <path d="M 270,185 L 584,185 L 672,273 L 672,718 L 270,718 Z" fill="url(#docFill-l)"/>
+        </g>
+        <path d="M 584,185 L 584,273 L 672,273 Z" fill="url(#foldFill-l)"/>
+        <path d="M 584,185 L 584,273 L 672,273" fill="none" stroke="white" stroke-width="2" opacity="0.25"/>
+        <line x1="326" y1="360" x2="612" y2="360" stroke="white" stroke-width="17" stroke-linecap="round" opacity="0.55"/>
+        <line x1="326" y1="415" x2="590" y2="415" stroke="white" stroke-width="15" stroke-linecap="round" opacity="0.40"/>
+        <line x1="326" y1="467" x2="566" y2="467" stroke="white" stroke-width="15" stroke-linecap="round" opacity="0.40"/>
+        <line x1="326" y1="519" x2="490" y2="519" stroke="white" stroke-width="15" stroke-linecap="round" opacity="0.25"/>
+        <path d="M 555,512 Q 555,495 572,495 L 753,495 Q 770,495 770,512 L 770,622 Q 770,722 660,785 Q 550,722 550,622 Z"
+              fill="url(#shieldFill-l)" filter="url(#shSh-l)"/>
+        <path d="M 568,518 Q 568,508 578,508 L 742,508 Q 752,508 752,518 L 752,620 Q 752,710 660,768 Q 568,710 568,620 Z"
+              fill="none" stroke="white" stroke-width="1.5" opacity="0.35"/>
+        <rect x="622" y="632" width="76" height="72" rx="13" fill="white" opacity="0.95"/>
+        <path d="M 639,632 L 639,603 Q 639,581 660,581 Q 681,581 681,603 L 681,632"
+              fill="none" stroke="white" stroke-width="14" stroke-linecap="round" opacity="0.95"/>
+        <circle cx="660" cy="660" r="10" fill="url(#shieldFill-l)" opacity="0.90"/>
+        <rect x="656" y="660" width="8" height="17" rx="4" fill="url(#shieldFill-l)" opacity="0.90"/>
+      </svg>
+    </div>
+    <div class="palette">
+      <div class="swatch" style="background:#EEF4FF;border-color:rgba(0,0,0,0.1);" title="Background top"></div>
+      <div class="swatch" style="background:#DAE8FF;border-color:rgba(0,0,0,0.1);" title="Background bottom"></div>
+      <div class="swatch" style="background:#1A3A9E;" title="Document fill"></div>
+      <div class="swatch" style="background:#63A6FA;" title="Shield bright"></div>
+      <div class="swatch" style="background:#14B8A6;" title="Shield teal"></div>
+    </div>
+    <!-- Small preview -->
+    <div class="small-row">
+      <div>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="60" height="60" style="border-radius:13px;display:block;">
+          <defs>
+            <linearGradient id="bg-ls" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#EEF4FF"/><stop offset="100%" stop-color="#DAE8FF"/>
+            </linearGradient>
+            <linearGradient id="df-ls" x1="270" y1="185" x2="672" y2="718" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#1A3A9E"/><stop offset="100%" stop-color="#0F2260"/>
+            </linearGradient>
+            <linearGradient id="ff-ls" x1="584" y1="185" x2="672" y2="273" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#2A5ACD"/><stop offset="100%" stop-color="#1A3A9E"/>
+            </linearGradient>
+            <linearGradient id="sf-ls" x1="540" y1="495" x2="770" y2="790" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#63A6FA"/><stop offset="100%" stop-color="#14B8A6"/>
+            </linearGradient>
+          </defs>
+          <rect width="1024" height="1024" rx="220" fill="url(#bg-ls)"/>
+          <path d="M 270,185 L 584,185 L 672,273 L 672,718 L 270,718 Z" fill="url(#df-ls)"/>
+          <path d="M 584,185 L 584,273 L 672,273 Z" fill="url(#ff-ls)"/>
+          <line x1="326" y1="360" x2="612" y2="360" stroke="white" stroke-width="17" stroke-linecap="round" opacity="0.55"/>
+          <line x1="326" y1="415" x2="590" y2="415" stroke="white" stroke-width="15" stroke-linecap="round" opacity="0.40"/>
+          <line x1="326" y1="467" x2="566" y2="467" stroke="white" stroke-width="15" stroke-linecap="round" opacity="0.40"/>
+          <path d="M 555,512 Q 555,495 572,495 L 753,495 Q 770,495 770,512 L 770,622 Q 770,722 660,785 Q 550,722 550,622 Z" fill="url(#sf-ls)"/>
+          <rect x="622" y="632" width="76" height="72" rx="13" fill="white" opacity="0.95"/>
+          <path d="M 639,632 L 639,603 Q 639,581 660,581 Q 681,581 681,603 L 681,632" fill="none" stroke="white" stroke-width="14" stroke-linecap="round" opacity="0.95"/>
+          <circle cx="660" cy="660" r="10" fill="url(#sf-ls)" opacity="0.90"/>
+        </svg>
+        <div class="size-label">60pt</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p style="color:#CDD6E0;font-size:12px;opacity:0.45;margin-top:8px;">
+  SVG source files saved to AppIcon.appiconset/
+</p>
+
+</body>
+</html>

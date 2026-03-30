@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- Background gradient: deep navy -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#0A1121"/>
+      <stop offset="100%" stop-color="#0D1830"/>
+    </linearGradient>
+
+    <!-- Blue → teal brand gradient -->
+    <linearGradient id="brand" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#61A6FA"/>
+      <stop offset="55%"  stop-color="#1C4FD8"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+
+    <!-- Vertical brand gradient for the V letterform -->
+    <linearGradient id="vGrad" x1="0" y1="330" x2="0" y2="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#61A6FA"/>
+      <stop offset="100%" stop-color="#13CFBC"/>
+    </linearGradient>
+
+    <!-- Subtle inner glow -->
+    <radialGradient id="glow" cx="50%" cy="45%" r="45%">
+      <stop offset="0%"   stop-color="#1C4FD8" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#0A1121" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Clip to iOS rounded-square shape -->
+    <clipPath id="ios">
+      <rect width="1024" height="1024" rx="220" ry="220"/>
+    </clipPath>
+  </defs>
+
+  <!-- ── Background ── -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="220" fill="url(#glow)"/>
+
+  <!-- ── Vault dial ring ── -->
+  <!-- Outer thin ring -->
+  <circle cx="512" cy="512" r="370"
+    fill="none"
+    stroke="url(#brand)"
+    stroke-width="3"
+    opacity="0.30"/>
+
+  <!-- Primary ring (medium weight) -->
+  <circle cx="512" cy="512" r="340"
+    fill="none"
+    stroke="url(#brand)"
+    stroke-width="8"
+    opacity="0.70"/>
+
+  <!-- Compass tick marks — 12, 3, 6, 9 o'clock
+       Outer ring at r=340, tick goes from r=330 inward to r=300 -->
+  <!-- 12 o'clock  (512, 512-340) = (512, 172) -->
+  <line x1="512" y1="172" x2="512" y2="210"
+    stroke="url(#brand)" stroke-width="10" stroke-linecap="round" opacity="0.90"/>
+  <!-- 3 o'clock  (512+340, 512) = (852, 512) -->
+  <line x1="852" y1="512" x2="814" y2="512"
+    stroke="url(#brand)" stroke-width="10" stroke-linecap="round" opacity="0.90"/>
+  <!-- 6 o'clock  (512, 512+340) = (512, 852) -->
+  <line x1="512" y1="852" x2="512" y2="814"
+    stroke="url(#brand)" stroke-width="10" stroke-linecap="round" opacity="0.90"/>
+  <!-- 9 o'clock  (512-340, 512) = (172, 512) -->
+  <line x1="172" y1="512" x2="210" y2="512"
+    stroke="url(#brand)" stroke-width="10" stroke-linecap="round" opacity="0.90"/>
+
+  <!-- Diagonal minor ticks (45°, 135°, 225°, 315°)
+       At r=340: offset = 340*sin(45°) ≈ 240 -->
+  <line x1="752" y1="272" x2="726" y2="298"
+    stroke="url(#brand)" stroke-width="5" stroke-linecap="round" opacity="0.35"/>
+  <line x1="752" y1="752" x2="726" y2="726"
+    stroke="url(#brand)" stroke-width="5" stroke-linecap="round" opacity="0.35"/>
+  <line x1="272" y1="752" x2="298" y2="726"
+    stroke="url(#brand)" stroke-width="5" stroke-linecap="round" opacity="0.35"/>
+  <line x1="272" y1="272" x2="298" y2="298"
+    stroke="url(#brand)" stroke-width="5" stroke-linecap="round" opacity="0.35"/>
+
+  <!-- ── Bold "V" monogram — the core brand mark ── -->
+  <!--  Left arm:  (338, 330) → (512, 694)
+        Right arm: (512, 694) → (686, 330)
+        Stroke weight 72 for bold presence, linecap round for softness -->
+  <polyline
+    points="345,330 512,700 679,330"
+    fill="none"
+    stroke="url(#vGrad)"
+    stroke-width="72"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <!-- Inner serif cap line across top of V arms (thin, elegant) -->
+  <line x1="307" y1="330" x2="383" y2="330"
+    stroke="url(#vGrad)" stroke-width="20" stroke-linecap="round" opacity="0.80"/>
+  <line x1="641" y1="330" x2="717" y2="330"
+    stroke="url(#vGrad)" stroke-width="20" stroke-linecap="round" opacity="0.80"/>
+
+  <!-- Small center pivot dot (vault handle reference) -->
+  <circle cx="512" cy="512" r="14"
+    fill="url(#brand)"
+    opacity="0.60"/>
+
+</svg>

@@ -17,7 +17,7 @@ class VaultViewModel {
     }
 
     func totalDeclaredValue(_ items: [Item]) -> Double {
-        items.reduce(0) { $0 + $1.estimatedValue }
+        items.reduce(0) { $0 + $1.valuationAmount }
     }
 
     func documentedCount(_ items: [Item]) -> Int {

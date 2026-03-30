@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#0A1121"/>
+      <stop offset="100%" stop-color="#0D1830"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="200" y1="180" x2="820" y2="840" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#61A6FA"/>
+      <stop offset="55%"  stop-color="#1C4FD8"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="vGrad" x1="0" y1="270" x2="0" y2="680" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#61A6FA"/>
+      <stop offset="100%" stop-color="#13CFBC"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="38%" r="54%">
+      <stop offset="0%"   stop-color="#1C4FD8" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#0A1121" stop-opacity="0"/>
+    </radialGradient>
+    <!-- very subtle shield face fill -->
+    <linearGradient id="shieldFill" x1="0" y1="200" x2="0" y2="840" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.01"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="220" fill="url(#glow)"/>
+
+  <!-- Shield outline
+       Top: flat from x=330 to x=694  (y=195)
+       Corners: radius 42
+       Sides: straight to y=558
+       Bottom: quad curves meeting at point (512, 842) -->
+  <path d="
+    M 330,195
+    L 694,195
+    Q 736,195 736,237
+    L 736,558
+    Q 736,710 512,842
+    Q 288,710 288,558
+    L 288,237
+    Q 288,195 330,195
+    Z"
+    fill="url(#shieldFill)"
+    stroke="url(#brand)"
+    stroke-width="9"
+    stroke-linejoin="round"
+    opacity="0.88"/>
+
+  <!-- V monogram -->
+  <polyline points="360,288 512,664 664,288"
+    fill="none"
+    stroke="url(#vGrad)"
+    stroke-width="62"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <!-- Elegant serif caps at top of each arm -->
+  <line x1="322" y1="288" x2="398" y2="288"
+    stroke="url(#vGrad)" stroke-width="18" stroke-linecap="round" opacity="0.78"/>
+  <line x1="626" y1="288" x2="702" y2="288"
+    stroke="url(#vGrad)" stroke-width="18" stroke-linecap="round" opacity="0.78"/>
+</svg>

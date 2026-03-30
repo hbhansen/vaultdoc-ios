@@ -5,33 +5,39 @@ struct ValuationService {
         let name: String
         let category: String
         let currency: String
+        let countryCode: String
         let purchasePrice: Double
         let purchaseDate: Date
         let serialNumber: String
         let notes: String
         let photoCount: Int
         let documentCount: Int
+        let photoData: [Data]
 
         init(
             name: String,
             category: String,
             currency: String,
+            countryCode: String,
             purchasePrice: Double,
             purchaseDate: Date,
             serialNumber: String,
             notes: String,
             photoCount: Int,
-            documentCount: Int
+            documentCount: Int,
+            photoData: [Data] = []
         ) {
             self.name = name
             self.category = category
             self.currency = currency
+            self.countryCode = countryCode
             self.purchasePrice = purchasePrice
             self.purchaseDate = purchaseDate
             self.serialNumber = serialNumber
             self.notes = notes
             self.photoCount = photoCount
             self.documentCount = documentCount
+            self.photoData = photoData
         }
 
         init(item: Item) {
@@ -39,12 +45,14 @@ struct ValuationService {
                 name: item.name,
                 category: item.category,
                 currency: item.currency,
+                countryCode: defaultCountryCode,
                 purchasePrice: item.purchasePrice,
                 purchaseDate: item.purchaseDate,
                 serialNumber: item.serialNumber,
                 notes: item.notes,
                 photoCount: item.photos.count,
-                documentCount: item.documents.count
+                documentCount: item.documents.count,
+                photoData: item.photos.map(\.imageData)
             )
         }
     }
@@ -54,6 +62,9 @@ struct ValuationService {
         let currency: String
         let source: Source
         let confidence: Confidence
+        let identifiedObject: String?
+        let make: String?
+        let model: String?
     }
 
     enum Source: String, Sendable {
@@ -72,19 +83,55 @@ struct ValuationService {
     }
 
     static func valuate(input: Input) async throws -> Result {
-        if AnthropicService.isConfigured {
+        if ValuationRules.remoteValuationEnabled, ChatGPTService.isConfigured, !input.photoData.isEmpty {
             do {
-                let amount = try await AnthropicService.estimateValue(
-                    name: input.name,
-                    category: input.category,
+                let assessment = try await ChatGPTService.valuateObject(
+                    nameHint: input.name,
+                    categoryHint: input.category,
                     purchasePrice: input.purchasePrice,
-                    year: YearFormatter.year(from: input.purchaseDate)
+                    purchaseDate: input.purchaseDate,
+                    currency: input.currency,
+                    countryCode: input.countryCode,
+                    photos: input.photoData
                 )
+                return Result(
+                    amount: roundedCurrency(assessment.amount),
+                    currency: input.currency,
+                    source: .ai,
+                    confidence: confidence(for: input),
+                    identifiedObject: assessment.identifiedObject,
+                    make: assessment.make,
+                    model: assessment.model
+                )
+            } catch let error as ChatGPTError where error == .unsupportedSubject {
+                throw error
+            } catch {
+                return heuristicValuation(for: input)
+            }
+        }
+
+        if ValuationRules.remoteValuationEnabled, ChatGPTService.isConfigured {
+            do {
+                let amountText = try await ChatGPTService.sendMessage(
+                    ValuationRules.textOnlyValuationPrompt(
+                        name: input.name,
+                        category: input.category,
+                        currency: input.currency,
+                        purchasePrice: input.purchasePrice,
+                        purchaseDate: input.purchaseDate
+                    )
+                )
+                guard let amount = Double(amountText.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+                    throw ChatGPTError.parseError
+                }
                 return Result(
                     amount: amount,
                     currency: input.currency,
                     source: .ai,
-                    confidence: confidence(for: input)
+                    confidence: confidence(for: input),
+                    identifiedObject: nil,
+                    make: nil,
+                    model: nil
                 )
             } catch {
                 return heuristicValuation(for: input)
@@ -102,63 +149,33 @@ struct ValuationService {
         let normalizedCategory = input.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let purchasePrice = max(0, input.purchasePrice)
 
-        let categoryRule = depreciationRule(for: normalizedCategory)
+        let categoryRule = ValuationRules.categoryRule(for: normalizedCategory)
         let agedValue = purchasePrice * pow(categoryRule.annualFactor, Double(age))
-        let documentationMultiplier = 1 + documentationScore(for: input) * 0.08
-        let noteMultiplier = input.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 1.0 : 1.03
-        let serialMultiplier = input.serialNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 1.0 : 1.02
+        let documentationMultiplier = 1 + documentationScore(for: input) * ValuationRules.documentationValueBoost
+        let noteMultiplier = input.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 1.0 : ValuationRules.notesMultiplier
+        let serialMultiplier = input.serialNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 1.0 : ValuationRules.serialNumberMultiplier
 
         let rawValue = agedValue * documentationMultiplier * noteMultiplier * serialMultiplier
         let floorValue = purchasePrice * categoryRule.floorFactor
-        let fallbackBaseline = baselineValue(for: normalizedCategory)
-        let amount = max(rawValue, floorValue, fallbackBaseline)
+        let fallbackBaseline = categoryRule.baselineValue
+        let amount = max(rawValue, floorValue, fallbackBaseline) * ValuationRules.countryMultiplier(for: input.countryCode)
 
         return Result(
             amount: roundedCurrency(amount),
             currency: input.currency,
             source: .heuristic,
-            confidence: confidence(for: input)
+            confidence: confidence(for: input),
+            identifiedObject: nil,
+            make: nil,
+            model: nil
         )
-    }
-
-    private static func depreciationRule(for category: String) -> (annualFactor: Double, floorFactor: Double) {
-        switch category {
-        case "electronics":
-            return (0.85, 0.20)
-        case "furniture":
-            return (0.94, 0.35)
-        case "art":
-            return (1.04, 0.80)
-        case "jewellery":
-            return (1.03, 0.85)
-        case "collectibles":
-            return (1.05, 0.90)
-        default:
-            return (0.98, 0.50)
-        }
-    }
-
-    private static func baselineValue(for category: String) -> Double {
-        switch category {
-        case "electronics":
-            return 150
-        case "furniture":
-            return 300
-        case "art":
-            return 500
-        case "jewellery":
-            return 400
-        case "collectibles":
-            return 250
-        default:
-            return 100
-        }
     }
 
     private static func documentationScore(for input: Input) -> Double {
         let photoScore = min(Double(input.photoCount) / 3, 1)
         let documentScore = min(Double(input.documentCount) / 2, 1)
-        return (photoScore * 0.6) + (documentScore * 0.4)
+        return (photoScore * ValuationRules.documentationPhotoWeight)
+            + (documentScore * ValuationRules.documentationDocumentWeight)
     }
 
     private static func confidence(for input: Input) -> Confidence {
@@ -179,5 +196,9 @@ struct ValuationService {
 
     private static func roundedCurrency(_ amount: Double) -> Double {
         (amount * 100).rounded() / 100
+    }
+
+    private static var defaultCountryCode: String {
+        ValuationRules.defaultCountryCode
     }
 }

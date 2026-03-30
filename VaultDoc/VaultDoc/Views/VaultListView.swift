@@ -177,7 +177,7 @@ struct VaultListView: View {
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(BrandTheme.accentGradient)
-                    .foregroundStyle(BrandTheme.backgroundBottom)
+                    .foregroundStyle(BrandTheme.actionForeground)
                     .clipShape(Capsule())
             }
             .padding(.top, 8)
@@ -300,18 +300,18 @@ struct StatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
-                .foregroundStyle(BrandTheme.backgroundTop)
+                .foregroundStyle(BrandTheme.actionForeground)
                 .font(.headline)
                 .frame(width: 32, height: 32)
-                .background(.white.opacity(0.82), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(BrandTheme.accent.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             Text(value)
                 .font(.system(size: 15, weight: .black, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-                .foregroundStyle(BrandTheme.backgroundTop)
+                .foregroundStyle(BrandTheme.actionForeground)
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(BrandTheme.backgroundTop.opacity(0.72))
+                .foregroundStyle(BrandTheme.actionForeground.opacity(0.78))
                 .lineLimit(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

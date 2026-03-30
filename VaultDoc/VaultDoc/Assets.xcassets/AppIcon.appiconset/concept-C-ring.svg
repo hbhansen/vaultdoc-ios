@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#0A1121"/>
+      <stop offset="100%" stop-color="#0D1830"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="150" y1="150" x2="874" y2="874" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#61A6FA"/>
+      <stop offset="55%"  stop-color="#1C4FD8"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="vGrad" x1="0" y1="310" x2="0" y2="690" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#61A6FA"/>
+      <stop offset="100%" stop-color="#13CFBC"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%"   stop-color="#1C4FD8" stop-opacity="0.26"/>
+      <stop offset="100%" stop-color="#0A1121" stop-opacity="0"/>
+    </radialGradient>
+    <!-- arc dash pattern approximation: 4 visible arcs separated by gaps at tick positions -->
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="220" fill="url(#glow)"/>
+
+  <!-- Outer feather ring (very thin, low opacity) -->
+  <circle cx="512" cy="512" r="388"
+    fill="none"
+    stroke="url(#brand)"
+    stroke-width="2"
+    opacity="0.22"/>
+
+  <!-- Primary vault dial ring -->
+  <circle cx="512" cy="512" r="356"
+    fill="none"
+    stroke="url(#brand)"
+    stroke-width="10"
+    opacity="0.68"/>
+
+  <!-- Four bold compass ticks — outside the ring, pointing inward
+       r=356, tick length 42px, from r=388 to r=346 -->
+  <!-- 12 o'clock: (512, 512-356)=(512,156)  →  (512, 156+42)=(512,198) -->
+  <line x1="512" y1="148" x2="512" y2="195"
+    stroke="url(#brand)" stroke-width="11" stroke-linecap="round" opacity="0.92"/>
+  <!-- 3 o'clock: (868, 512) → (826, 512) -->
+  <line x1="876" y1="512" x2="829" y2="512"
+    stroke="url(#brand)" stroke-width="11" stroke-linecap="round" opacity="0.92"/>
+  <!-- 6 o'clock: (512, 868) → (512, 826) -->
+  <line x1="512" y1="876" x2="512" y2="829"
+    stroke="url(#brand)" stroke-width="11" stroke-linecap="round" opacity="0.92"/>
+  <!-- 9 o'clock: (148, 512) → (195, 512) -->
+  <line x1="148" y1="512" x2="195" y2="512"
+    stroke="url(#brand)" stroke-width="11" stroke-linecap="round" opacity="0.92"/>
+
+  <!-- Eight minor ticks at 45° intervals
+       r=356, sin/cos(45°)=0.7071, offset=356×0.7071≈252 -->
+  <!-- NE: (512+252, 512-252)=(764,260) → inward 24px: (747,277) -->
+  <line x1="764" y1="260" x2="747" y2="277"
+    stroke="url(#brand)" stroke-width="6" stroke-linecap="round" opacity="0.36"/>
+  <!-- SE: (764,764) → (747,747) -->
+  <line x1="764" y1="764" x2="747" y2="747"
+    stroke="url(#brand)" stroke-width="6" stroke-linecap="round" opacity="0.36"/>
+  <!-- SW: (260,764) → (277,747) -->
+  <line x1="260" y1="764" x2="277" y2="747"
+    stroke="url(#brand)" stroke-width="6" stroke-linecap="round" opacity="0.36"/>
+  <!-- NW: (260,260) → (277,277) -->
+  <line x1="260" y1="260" x2="277" y2="277"
+    stroke="url(#brand)" stroke-width="6" stroke-linecap="round" opacity="0.36"/>
+
+  <!-- Inner accent ring (subtle depth layer) -->
+  <circle cx="512" cy="512" r="278"
+    fill="none"
+    stroke="url(#brand)"
+    stroke-width="3"
+    opacity="0.18"/>
+
+  <!-- V monogram — lighter weight, no serif caps (cleaner) -->
+  <polyline points="352,322 512,692 672,322"
+    fill="none"
+    stroke="url(#vGrad)"
+    stroke-width="54"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <!-- Tiny pivot dot at center -->
+  <circle cx="512" cy="512" r="12"
+    fill="url(#brand)"
+    opacity="0.55"/>
+</svg>

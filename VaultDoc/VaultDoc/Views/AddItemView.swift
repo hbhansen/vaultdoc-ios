@@ -16,10 +16,13 @@ struct AddItemView: View {
     @State private var category = "other"
     @State private var currency = ""
     @State private var purchasePrice = ""
-    @State private var estimatedValue = ""
     @State private var purchaseDate = YearFormatter.currentDate
     @State private var serialNumber = ""
     @State private var notes = ""
+    @State private var valuationAmount: Double?
+    @State private var isRequestingValuation = false
+    @State private var valuationError: String?
+    @State private var valuationTask: Task<Void, Never>?
 
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var capturedImages: [UIImage] = []
@@ -68,13 +71,33 @@ struct AddItemView: View {
                             .keyboardType(.decimalPad)
                     }
 
-                    HStack {
-                        Text(selectedCurrency?.symbol ?? "€")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 24)
-                        TextField(L10n.tr("item.field.declared_value"), text: $estimatedValue)
-                            .keyboardType(.decimalPad)
+                    Button {
+                        guard !isRequestingValuation else { return }
+                        scheduleValuationRefresh()
+                    } label: {
+                        LabeledContent("Valuation") {
+                            if isRequestingValuation {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text("Analyzing photos")
+                                        .foregroundStyle(.secondary)
+                                }
+                            } else if let valuationAmount {
+                                Text(
+                                    CurrencyFormatter.format(
+                                        valuationAmount,
+                                        code: currency,
+                                        symbol: selectedCurrency?.symbol
+                                    )
+                                )
+                            } else {
+                                Text("Calculated automatically from photos")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
 
                     DatePicker(
                         L10n.tr("item.field.year_purchased"),
@@ -112,6 +135,7 @@ struct AddItemView: View {
                                         .overlay(alignment: .topTrailing) {
                                             Button {
                                                 capturedImages.remove(at: idx)
+                                                scheduleValuationRefresh()
                                             } label: {
                                                 Image(systemName: "xmark.circle.fill")
                                                     .foregroundStyle(.white)
@@ -133,6 +157,7 @@ struct AddItemView: View {
                             }
                         }
                         photoItems = []
+                        scheduleValuationRefresh()
                     }
                 }
 
@@ -145,7 +170,7 @@ struct AddItemView: View {
                     ForEach(attachedDocuments, id: \.filename) { doc in
                         HStack {
                             Image(systemName: "doc.fill")
-                                .foregroundStyle(.teal)
+                                .foregroundStyle(BrandTheme.accentBright)
                             VStack(alignment: .leading) {
                                 Text(doc.filename)
                                     .font(.subheadline)
@@ -158,13 +183,22 @@ struct AddItemView: View {
                     }
                     .onDelete { offsets in
                         attachedDocuments.remove(atOffsets: offsets)
+                        scheduleValuationRefresh()
                     }
                 }
 
                 if let error = saveError {
                     Section {
                         Text(error)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(BrandTheme.alert)
+                            .font(.caption)
+                    }
+                }
+
+                if let valuationError {
+                    Section {
+                        Text(valuationError)
+                            .foregroundStyle(BrandTheme.alert)
                             .font(.caption)
                     }
                 }
@@ -188,6 +222,7 @@ struct AddItemView: View {
                 CameraView { imageData in
                     if let img = UIImage(data: imageData) {
                         capturedImages.append(img)
+                        scheduleValuationRefresh()
                     }
                 }
             }
@@ -195,6 +230,7 @@ struct AddItemView: View {
                 DocumentPickerView { url in
                     if let data = try? Data(contentsOf: url) {
                         attachedDocuments.append((filename: url.lastPathComponent, data: data))
+                        scheduleValuationRefresh()
                     }
                 }
             }
@@ -202,20 +238,35 @@ struct AddItemView: View {
                 if let item = existingItem {
                     name = item.name
                     category = item.category
-                    currency = config.defaultCurrencyCode
+                    currency = item.currency
                     purchasePrice = item.purchasePrice > 0 ? String(item.purchasePrice) : ""
-                    estimatedValue = item.estimatedValue > 0 ? String(item.estimatedValue) : ""
+                    valuationAmount = item.valuationAmount > 0 ? item.valuationAmount : nil
                     purchaseDate = item.purchaseDate
                     serialNumber = item.serialNumber
                     notes = item.notes
+                    scheduleValuationRefresh()
                 } else {
                     currency = config.defaultCurrencyCode
                     purchaseDate = YearFormatter.currentDate
+                    valuationAmount = nil
                 }
             }
             .onChange(of: config.defaultCurrencyCode) { _, newCode in
                 guard !newCode.isEmpty else { return }
                 currency = newCode
+                scheduleValuationRefresh()
+            }
+            .onChange(of: purchaseDate) { _, _ in
+                scheduleValuationRefresh()
+            }
+            .onChange(of: purchasePrice) { _, _ in
+                scheduleValuationRefresh()
+            }
+            .onChange(of: category) { _, _ in
+                scheduleValuationRefresh()
+            }
+            .onChange(of: name) { _, _ in
+                scheduleValuationRefresh()
             }
         }
         .brandBackground()
@@ -225,7 +276,7 @@ struct AddItemView: View {
         isSaving = true
         saveError = nil
         let purchase = Double(purchasePrice) ?? 0
-        let declared = Double(estimatedValue) ?? 0
+        let valuation = valuationAmount ?? existingItem?.valuationAmount ?? 0
 
         do {
             if let existing = existingItem {
@@ -238,8 +289,8 @@ struct AddItemView: View {
                     category: category,
                     currency: currency,
                     purchasePrice: purchase,
-                    estimatedValue: declared,
-                    aiEstimate: existing.aiEstimate,
+                    estimatedValue: valuation,
+                    aiEstimate: valuation > 0 ? valuation : existing.aiEstimate,
                     yearPurchased: YearFormatter.year(from: purchaseDate),
                     serialNumber: serialNumber,
                     notes: notes,
@@ -252,7 +303,8 @@ struct AddItemView: View {
                 existing.category = category
                 existing.currency = currency
                 existing.purchasePrice = purchase
-                existing.estimatedValue = declared
+                existing.estimatedValue = valuation
+                existing.aiEstimate = valuation > 0 ? valuation : existing.aiEstimate
                 existing.purchaseDate = purchaseDate
                 existing.serialNumber = serialNumber
                 existing.notes = notes
@@ -296,8 +348,8 @@ struct AddItemView: View {
                     category: category,
                     currency: currency,
                     purchasePrice: purchase,
-                    estimatedValue: declared,
-                    aiEstimate: nil,
+                    estimatedValue: valuation,
+                    aiEstimate: valuation > 0 ? valuation : nil,
                     yearPurchased: YearFormatter.year(from: purchaseDate),
                     serialNumber: serialNumber,
                     notes: notes,
@@ -315,7 +367,8 @@ struct AddItemView: View {
                     category: category,
                     currency: currency,
                     purchasePrice: purchase,
-                    estimatedValue: declared,
+                    estimatedValue: valuation,
+                    aiEstimate: valuation > 0 ? valuation : nil,
                     purchaseDate: purchaseDate,
                     serialNumber: serialNumber,
                     notes: notes,
@@ -349,24 +402,6 @@ struct AddItemView: View {
                     modelContext.insert(document)
                     item.documents.append(document)
                 }
-
-                // Async AI estimate
-                Task {
-                    if !name.isEmpty && purchase > 0 {
-                        if let value = try? await AnthropicService.estimateValue(
-                            name: item.name,
-                            category: item.category,
-                            purchasePrice: item.purchasePrice,
-                            year: item.yearPurchased
-                        ) {
-                            item.aiEstimate = value
-                            // Persist AI estimate to Supabase
-                            var updated = payload
-                            updated.aiEstimate = value
-                            _ = try? await SupabaseDataService.updateItem(id: itemId, updated)
-                        }
-                    }
-                }
             }
 
             isSaving = false
@@ -396,6 +431,62 @@ struct AddItemView: View {
         }
 
         return auth.effectiveInventoryId
+    }
+
+    private func scheduleValuationRefresh() {
+        valuationTask?.cancel()
+        valuationTask = Task {
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled else { return }
+            await refreshValuationPreview()
+        }
+    }
+
+    @MainActor
+    private func refreshValuationPreview() async {
+        let photoData = valuationPhotoData()
+        guard !photoData.isEmpty else {
+            isRequestingValuation = false
+            valuationError = nil
+            valuationAmount = existingItem?.valuationAmount
+            return
+        }
+
+        isRequestingValuation = true
+        valuationError = nil
+
+        do {
+            let valuation = try await ValuationService.valuate(
+                input: ValuationService.Input(
+                    name: name,
+                    category: category,
+                    currency: currency.isEmpty ? config.defaultCurrencyCode : currency,
+                    countryCode: Locale.autoupdatingCurrent.region?.identifier ?? "US",
+                    purchasePrice: Double(purchasePrice) ?? 0,
+                    purchaseDate: purchaseDate,
+                    serialNumber: serialNumber,
+                    notes: notes,
+                    photoCount: photoData.count,
+                    documentCount: attachedDocuments.count + (existingItem?.documents.count ?? 0),
+                    photoData: photoData
+                )
+            )
+            guard !Task.isCancelled else { return }
+            valuationAmount = valuation.amount
+            isRequestingValuation = false
+        } catch {
+            guard !Task.isCancelled else { return }
+            valuationError = error.localizedDescription
+            isRequestingValuation = false
+        }
+    }
+
+    private func valuationPhotoData() -> [Data] {
+        let existingPhotos = existingItem?.photos.map(\.imageData) ?? []
+        let newPhotos = capturedImages.compactMap { image in
+            ImageCompressor.compress(image)
+        }
+        return existingPhotos + newPhotos
     }
 
     private func uploadPhotos(for itemId: UUID, inventoryId: String) async throws -> [(id: UUID, data: Data, storagePath: String)] {
