@@ -12,6 +12,48 @@
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+    <key>CFBundleIcons</key>
+    <dict>
+        <key>CFBundleAlternateIcons</key>
+        <dict>
+            <key>AppIconMidnight</key>
+            <dict>
+                <key>CFBundleIconName</key>
+                <string>AppIconMidnight</string>
+            </dict>
+            <key>AppIconSunrise</key>
+            <dict>
+                <key>CFBundleIconName</key>
+                <string>AppIconSunrise</string>
+            </dict>
+        </dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconName</key>
+            <string>AppIcon</string>
+        </dict>
+    </dict>
+    <key>CFBundleIcons~ipad</key>
+    <dict>
+        <key>CFBundleAlternateIcons</key>
+        <dict>
+            <key>AppIconMidnight</key>
+            <dict>
+                <key>CFBundleIconName</key>
+                <string>AppIconMidnight</string>
+            </dict>
+            <key>AppIconSunrise</key>
+            <dict>
+                <key>CFBundleIconName</key>
+                <string>AppIconSunrise</string>
+            </dict>
+        </dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconName</key>
+            <string>AppIcon</string>
+        </dict>
+    </dict>
     <key>CFBundleName</key>
     <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>

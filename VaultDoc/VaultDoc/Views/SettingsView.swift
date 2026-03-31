@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var isApplyingInvite = false
     @State private var isRemovingAccess = false
     @State private var sharingStatus: String?
+    @State private var selectedBrandAppearance: BrandAppearance = .classic
 
     var body: some View {
         NavigationStack {
@@ -185,6 +186,8 @@ struct SettingsView: View {
                     }
                 }
 
+                brandSection
+
                 // MARK: Export
                 Section(L10n.tr("settings.export")) {
                     Button {
@@ -228,8 +231,14 @@ struct SettingsView: View {
             }
             .onAppear {
                 defaultCurrencyCode = config.defaultCurrencyCode
+                selectedBrandAppearance = config.brandAppearance
                 Task {
                     await auth.refreshUserContext()
+                }
+            }
+            .onChange(of: selectedBrandAppearance) { _, newAppearance in
+                Task {
+                    await config.setBrandAppearance(newAppearance)
                 }
             }
             .onChange(of: defaultCurrencyCode) { _, newCode in
@@ -257,6 +266,76 @@ struct SettingsView: View {
     private func exportAll() {
         pdfData = PDFGenerator.generateAll(items: items)
         showShareSheet = true
+    }
+
+    private var brandSection: some View {
+        Section {
+            Picker("Theme variant", selection: $selectedBrandAppearance) {
+                ForEach(BrandAppearance.allCases) { appearance in
+                    Text(appearance.title)
+                        .tag(appearance)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            ForEach(BrandAppearance.allCases) { appearance in
+                brandOptionRow(for: appearance)
+            }
+        } header: {
+            Text("Brand")
+        } footer: {
+            Text("Brand appearance updates the app colours, splash experience, login screen, and app icon.")
+        }
+    }
+
+    private func brandOptionRow(for appearance: BrandAppearance) -> some View {
+        let palette = appearance.palette
+        let isActive = appearance == config.brandAppearance
+
+        return Button {
+            selectedBrandAppearance = appearance
+            Task {
+                await config.setBrandAppearance(appearance)
+            }
+        } label: {
+            HStack(spacing: 14) {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                palette.backgroundTop,
+                                palette.accentBright,
+                                palette.accentCool
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 54, height: 54)
+                    .overlay(
+                        Image(systemName: isActive ? "checkmark" : "sparkles")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(palette.actionForeground)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(appearance.title)
+                        .foregroundStyle(BrandTheme.textPrimary)
+                    Text(appearance.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if isActive {
+                    Text("Active")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(BrandTheme.accent)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var sharedAccessEntries: [SharedAccessEntry] {

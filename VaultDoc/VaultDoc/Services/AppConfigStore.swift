@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 @MainActor
 @Observable
@@ -8,12 +9,14 @@ class AppConfigStore {
     var categories: [RemoteCategory] = AppConfigStore.defaultCategories
     var currencies: [RemoteCurrency] = AppConfigStore.defaultCurrencies
     var defaultCurrencyCode: String = "EUR"
+    var brandAppearance: BrandAppearance = .classic
     var isLoading = false
     var lastError: String?
 
     private let categoriesCacheKey = "cached_categories"
     private let currenciesCacheKey = "cached_currencies"
     private let defaultCurrencyKeyPrefix = "default_currency_code"
+    private let brandAppearanceKey = "selected_brand_appearance"
 
     private init() {
         loadFromCache()
@@ -91,6 +94,17 @@ class AppConfigStore {
         _ = try await SupabaseDataService.upsertUserProfile(payload)
     }
 
+    func setBrandAppearance(_ appearance: BrandAppearance) async {
+        guard brandAppearance != appearance else { return }
+        brandAppearance = appearance
+        UserDefaults.standard.set(appearance.rawValue, forKey: brandAppearanceKey)
+        await updateAppIcon(for: appearance)
+    }
+
+    func applyPersistedBrandAppearance() async {
+        await updateAppIcon(for: brandAppearance)
+    }
+
     func applyProjectCurrency(
         code: String,
         to items: [Item],
@@ -158,6 +172,10 @@ class AppConfigStore {
            let cached = try? decoder.decode([RemoteCurrency].self, from: data), !cached.isEmpty {
             currencies = cached
         }
+        if let rawValue = UserDefaults.standard.string(forKey: brandAppearanceKey),
+           let cachedAppearance = BrandAppearance(rawValue: rawValue) {
+            brandAppearance = cachedAppearance
+        }
         normalizeDefaultCurrency()
     }
 
@@ -176,6 +194,16 @@ class AppConfigStore {
 
     private func defaultCurrencyKey(for userId: String) -> String {
         "\(defaultCurrencyKeyPrefix)_\(userId)"
+    }
+
+    private func updateAppIcon(for appearance: BrandAppearance) async {
+        guard UIApplication.shared.supportsAlternateIcons else { return }
+
+        do {
+            try await UIApplication.shared.setAlternateIconName(appearance.appIconName)
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     // MARK: - Hardcoded fallbacks (app works offline / before first sync)

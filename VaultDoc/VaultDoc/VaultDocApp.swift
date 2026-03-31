@@ -3,6 +3,7 @@ import SwiftData
 
 @main
 struct VaultDocApp: App {
+    @State private var configStore = AppConfigStore.shared
     @State private var languageSettings = LanguageSettings.shared
     @State private var showsOpeningSplash = true
 
@@ -43,8 +44,9 @@ struct VaultDocApp: App {
                         .zIndex(1)
                 }
             }
+            .id(configStore.brandAppearance)
             .id(languageSettings.selectedLanguage)
-            .environment(AppConfigStore.shared)
+            .environment(configStore)
             .environment(AuthService.shared)
             .environment(languageSettings)
             .environment(\.locale, languageSettings.locale)
@@ -60,10 +62,11 @@ struct VaultDocApp: App {
                     try? await Task.sleep(for: .seconds(1.2))
                 }
                 AuthService.shared.refreshBiometricAvailability()
-                await AppConfigStore.shared.refresh(
+                await configStore.refresh(
                     supabaseURL: Config.Supabase.url,
                     supabaseKey: Config.Supabase.anonKey
                 )
+                await configStore.applyPersistedBrandAppearance()
                 await minimumDisplayTask.value
                 withAnimation(.easeOut(duration: 0.45)) {
                     showsOpeningSplash = false
@@ -72,7 +75,7 @@ struct VaultDocApp: App {
             .task(id: AuthService.shared.isAuthenticated) {
                 guard AuthService.shared.isAuthenticated else { return }
                 await AuthService.shared.refreshUserContext()
-                await AppConfigStore.shared.syncDefaultCurrency(userId: AuthService.shared.userId)
+                await configStore.syncDefaultCurrency(userId: AuthService.shared.userId)
             }
         }
         .modelContainer(sharedModelContainer)
