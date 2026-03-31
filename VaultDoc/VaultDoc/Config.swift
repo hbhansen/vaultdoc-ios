@@ -1,11 +1,13 @@
+import Foundation
+
 // MARK: - App Configuration
-// Fill in your Supabase project credentials below.
-// This file is listed in .gitignore — never commit real keys.
+// Keep live secrets out of source control. Provide them via scheme environment
+// variables or a local Secrets.plist added to the app target.
 
 enum Config {
     enum Supabase {
         static let url = "https://twblphtenjgfhtdbexgx.supabase.co"
-        static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3YmxwaHRlbmpnZmh0ZGJleGd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MzY3NTAsImV4cCI6MjA4OTAxMjc1MH0.x1flWe9C3Mw2bxvXj-kGlQwPeAaj-zW48tVG5k8ZXV4"
+        static let anonKey = SecretStore.value(for: "SUPABASE_ANON_KEY")
     }
 
     enum PasswordReset {
@@ -14,11 +16,44 @@ enum Config {
     }
 
     enum Anthropic {
-        static let apiKey = ""
+        static let apiKey = SecretStore.value(for: "ANTHROPIC_API_KEY")
     }
 
     enum OpenAI {
-        static let apiKey = "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"
+        static let apiKey = SecretStore.value(for: "OPENAI_API_KEY")
         static let model = "gpt-5"
+    }
+}
+
+private enum SecretStore {
+    static func value(for key: String) -> String {
+        if let environmentValue = ProcessInfo.processInfo.environment[key]?.trimmed,
+           !environmentValue.isEmpty {
+            return environmentValue
+        }
+
+        if let bundledValue = bundledSecrets[key]?.trimmed,
+           !bundledValue.isEmpty {
+            return bundledValue
+        }
+
+        return ""
+    }
+
+    private static let bundledSecrets: [String: String] = {
+        guard let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
+              let data = try? Data(contentsOf: url),
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
+              let secrets = plist as? [String: String] else {
+            return [:]
+        }
+
+        return secrets
+    }()
+}
+
+private extension String {
+    var trimmed: String {
+        trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
