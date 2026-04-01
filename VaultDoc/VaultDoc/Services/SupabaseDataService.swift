@@ -499,12 +499,12 @@ enum DataServiceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notAuthenticated: return "Not authenticated. Please sign in."
-        case .uploadFailed: return "Failed to upload file."
-        case .downloadFailed: return "Failed to download file."
-        case .deleteFailed: return "Failed to delete file."
-        case .serverError(let msg): return "Server error: \(msg)"
-        case .emptyResponse: return "Server returned an empty response."
+        case .notAuthenticated: return L10n.tr("supabase.data.not_authenticated")
+        case .uploadFailed: return L10n.tr("supabase.data.upload_failed")
+        case .downloadFailed: return L10n.tr("supabase.data.download_failed")
+        case .deleteFailed: return L10n.tr("supabase.data.delete_failed")
+        case .serverError(let msg): return L10n.format("supabase.data.server_error", msg)
+        case .emptyResponse: return L10n.tr("supabase.data.empty_response")
         }
     }
 }

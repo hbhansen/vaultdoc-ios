@@ -4,6 +4,34 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 struct AddItemView: View {
+    enum AddFlowStep: Int, CaseIterable {
+        case evidence
+        case details
+        case review
+
+        var title: String {
+            switch self {
+            case .evidence:
+                return L10n.tr("Evidence")
+            case .details:
+                return L10n.tr("Details")
+            case .review:
+                return L10n.tr("Review")
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .evidence:
+                return L10n.tr("Capture or upload the files that prove ownership.")
+            case .details:
+                return L10n.tr("Confirm the essential facts for retrieval and claims.")
+            case .review:
+                return L10n.tr("Check the summary before saving to your vault.")
+            }
+        }
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(AppConfigStore.self) private var config
@@ -13,7 +41,7 @@ struct AddItemView: View {
     var existingItem: Item? = nil
 
     @State private var name = ""
-    @State private var category = "other"
+    @State private var category = "miscellaneous"
     @State private var currency = ""
     @State private var purchasePrice = ""
     @State private var purchaseDate = YearFormatter.currentDate
@@ -32,6 +60,8 @@ struct AddItemView: View {
 
     @State private var isSaving = false
     @State private var saveError: String?
+    @State private var currentStep: AddFlowStep = .evidence
+    @State private var showCategoryPicker = false
 
     var isEditing: Bool { existingItem != nil }
     var title: String { isEditing ? L10n.tr("add_item.edit_title") : L10n.tr("add_item.add_title") }
@@ -42,180 +72,54 @@ struct AddItemView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section(L10n.tr("add_item.section.details")) {
-                    TextField(L10n.tr("item.field.name"), text: $name)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    stepHeader
+                    stepBody
 
-                    Picker(L10n.tr("item.field.category"), selection: $category) {
-                        ForEach(config.categories) { cat in
-                            HStack {
-                                Image(systemName: cat.icon ?? "archivebox")
-                                Text(L10n.categoryName(cat.name, fallback: cat.displayName))
-                            }
-                            .tag(cat.name)
-                        }
-                    }
-
-                    LabeledContent(L10n.tr("item.field.currency")) {
-                        Text(
-                            "\(selectedCurrency?.symbol ?? config.currency(code: config.defaultCurrencyCode)?.symbol ?? "€")  \(currency)"
+                    if let error = saveError {
+                        NoticeBanner(
+                            text: error,
+                            systemImage: "exclamationmark.triangle.fill",
+                            tone: .critical
                         )
-                        .foregroundStyle(.secondary)
                     }
 
-                    HStack {
-                        Text(selectedCurrency?.symbol ?? "€")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 24)
-                        TextField(L10n.tr("item.field.purchase_price"), text: $purchasePrice)
-                            .keyboardType(.decimalPad)
-                    }
-
-                    Button {
-                        guard !isRequestingValuation else { return }
-                        scheduleValuationRefresh()
-                    } label: {
-                        LabeledContent("Valuation") {
-                            if isRequestingValuation {
-                                HStack(spacing: 8) {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                    Text("Analyzing photos")
-                                        .foregroundStyle(.secondary)
-                                }
-                            } else if let valuationAmount {
-                                Text(
-                                    CurrencyFormatter.format(
-                                        valuationAmount,
-                                        code: currency,
-                                        symbol: selectedCurrency?.symbol
-                                    )
-                                )
-                            } else {
-                                Text("Calculated automatically from photos")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    DatePicker(
-                        L10n.tr("item.field.year_purchased"),
-                        selection: $purchaseDate,
-                        in: ...Date(),
-                        displayedComponents: .date
-                    )
-                    TextField(L10n.tr("item.field.serial_number"), text: $serialNumber)
-                    TextField(L10n.tr("item.field.notes"), text: $notes, axis: .vertical)
-                        .lineLimit(3, reservesSpace: true)
-                }
-
-                Section(L10n.tr("item_detail.photos")) {
-                    HStack {
-                        Button {
-                            showCamera = true
-                        } label: {
-                            Label(L10n.tr("add_item.camera"), systemImage: "camera")
-                        }
-                        Spacer()
-                        PhotosPicker(selection: $photoItems, maxSelectionCount: 10,
-                                     matching: .images) {
-                            Label(L10n.tr("add_item.library"), systemImage: "photo.on.rectangle")
-                        }
-                    }
-                    if !capturedImages.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack {
-                                ForEach(Array(capturedImages.enumerated()), id: \.offset) { idx, img in
-                                    Image(uiImage: img)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 80, height: 80)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                        .overlay(alignment: .topTrailing) {
-                                            Button {
-                                                capturedImages.remove(at: idx)
-                                                scheduleValuationRefresh()
-                                            } label: {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .foregroundStyle(.white)
-                                                    .background(Color.black.opacity(0.5), in: Circle())
-                                            }
-                                            .padding(4)
-                                        }
-                                }
-                            }
-                        }
+                    if let valuationError {
+                        NoticeBanner(
+                            text: valuationError,
+                            systemImage: "info.circle.fill",
+                            tone: .info
+                        )
                     }
                 }
-                .onChange(of: photoItems) { _, newItems in
-                    Task {
-                        for item in newItems {
-                            if let data = try? await item.loadTransferable(type: Data.self),
-                               let img = UIImage(data: data) {
-                                capturedImages.append(img)
-                            }
-                        }
-                        photoItems = []
-                        scheduleValuationRefresh()
-                    }
-                }
-
-                Section(L10n.tr("item_detail.documents")) {
-                    Button {
-                        showDocumentPicker = true
-                    } label: {
-                        Label(L10n.tr("add_item.attach_document"), systemImage: "doc.badge.plus")
-                    }
-                    ForEach(attachedDocuments, id: \.filename) { doc in
-                        HStack {
-                            Image(systemName: "doc.fill")
-                                .foregroundStyle(BrandTheme.accentBright)
-                            VStack(alignment: .leading) {
-                                Text(doc.filename)
-                                    .font(.subheadline)
-                                Text(ByteCountFormatter.string(fromByteCount: Int64(doc.data.count),
-                                                               countStyle: .file))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .onDelete { offsets in
-                        attachedDocuments.remove(atOffsets: offsets)
-                        scheduleValuationRefresh()
-                    }
-                }
-
-                if let error = saveError {
-                    Section {
-                        Text(error)
-                            .foregroundStyle(BrandTheme.alert)
-                            .font(.caption)
-                    }
-                }
-
-                if let valuationError {
-                    Section {
-                        Text(valuationError)
-                            .foregroundStyle(BrandTheme.alert)
-                            .font(.caption)
-                    }
-                }
+                .padding(20)
+                .padding(.bottom, 28)
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .scrollContentBackground(.hidden)
-            .background(BrandTheme.backgroundGradient)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if currentStep != .evidence {
+                        Button(L10n.tr("Back")) {
+                            retreatStep()
+                        }
+                    }
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.tr("common.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isEditing ? L10n.tr("common.save") : L10n.tr("common.add")) {
-                        Task { await saveItem() }
+                    Button(primaryActionTitle) {
+                        Task {
+                            if currentStep == .review {
+                                await saveItem()
+                            } else {
+                                advanceStep()
+                            }
+                        }
                     }
-                    .disabled(name.isEmpty || isSaving)
+                    .disabled(primaryActionDisabled)
                 }
             }
             .fullScreenCover(isPresented: $showCamera) {
@@ -233,6 +137,12 @@ struct AddItemView: View {
                         scheduleValuationRefresh()
                     }
                 }
+            }
+            .sheet(isPresented: $showCategoryPicker) {
+                CategorySelectionView(
+                    groups: config.groupedCategories,
+                    selectedCategory: $category
+                )
             }
             .onAppear {
                 if let item = existingItem {
@@ -269,7 +179,330 @@ struct AddItemView: View {
                 scheduleValuationRefresh()
             }
         }
+        .onChange(of: photoItems) { _, newItems in
+            Task {
+                for item in newItems {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let img = UIImage(data: data) {
+                        capturedImages.append(img)
+                    }
+                }
+                photoItems = []
+                scheduleValuationRefresh()
+            }
+        }
         .brandBackground()
+    }
+
+    private var stepHeader: some View {
+        SectionCard(
+            title: currentStep.title,
+            subtitle: currentStep.subtitle
+        ) {
+            HStack(spacing: 12) {
+                ForEach(AddFlowStep.allCases, id: \.rawValue) { step in
+                    ValueBadge(
+                        title: L10n.format("Step %lld", Int64(step.rawValue + 1)),
+                        value: step.title,
+                        tone: step == currentStep ? .positive : .neutral
+                    )
+                }
+            }
+
+        }
+    }
+
+    @ViewBuilder
+    private var stepBody: some View {
+        switch currentStep {
+        case .evidence:
+            evidenceStep
+        case .details:
+            detailsStep
+        case .review:
+            reviewStep
+        }
+    }
+
+    private var evidenceStep: some View {
+        VStack(spacing: 20) {
+            SectionCard(
+                title: L10n.tr("Capture or upload"),
+                subtitle: L10n.tr("Add photos first. Documents can be attached before saving.")
+            ) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 12) {
+                        Button {
+                            showCamera = true
+                        } label: {
+                            Label(L10n.tr("add_item.camera"), systemImage: "camera")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(PrimaryActionButtonStyle())
+
+                        PhotosPicker(selection: $photoItems, maxSelectionCount: 10, matching: .images) {
+                            Label(L10n.tr("add_item.library"), systemImage: "photo.on.rectangle")
+                                .font(.system(size: 17, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(BrandTheme.surfaceElevated)
+                                )
+                                .foregroundStyle(BrandTheme.textPrimary)
+                        }
+                    }
+
+                    if !capturedImages.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(Array(capturedImages.enumerated()), id: \.offset) { idx, img in
+                                    Image(uiImage: img)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 88, height: 88)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .overlay(alignment: .topTrailing) {
+                                            Button {
+                                                capturedImages.remove(at: idx)
+                                                scheduleValuationRefresh()
+                                            } label: {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundStyle(BrandTheme.actionForeground)
+                                                    .background(BrandTheme.backgroundPrimary.opacity(0.72), in: Circle())
+                                            }
+                                            .padding(6)
+                                        }
+                                }
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        ValueBadge(title: L10n.tr("Photos"), value: "\(capturedImages.count + (existingItem?.photos.count ?? 0))")
+                        ValueBadge(title: L10n.tr("Documents"), value: "\(attachedDocuments.count + (existingItem?.documents.count ?? 0))")
+                    }
+                }
+            }
+
+            SectionCard(
+                title: L10n.tr("item_detail.documents"),
+                subtitle: L10n.tr("Receipts, certificates, and manuals improve proof quality.")
+            ) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Button {
+                        showDocumentPicker = true
+                    } label: {
+                        Label(L10n.tr("add_item.attach_document"), systemImage: "doc.badge.plus")
+                    }
+                    .buttonStyle(PrimaryActionButtonStyle())
+
+                    if attachedDocuments.isEmpty {
+                        Text(L10n.tr("No new documents attached."))
+                            .font(.system(size: 15))
+                            .foregroundStyle(BrandTheme.textSecondary)
+                    } else {
+                        ForEach(Array(attachedDocuments.enumerated()), id: \.offset) { idx, doc in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(doc.filename)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundStyle(BrandTheme.textPrimary)
+                                    Text(ByteCountFormatter.string(fromByteCount: Int64(doc.data.count), countStyle: .file))
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(BrandTheme.textSecondary)
+                                }
+                                Spacer()
+                                Button(role: .destructive) {
+                                    attachedDocuments.remove(at: idx)
+                                    scheduleValuationRefresh()
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var detailsStep: some View {
+        VStack(spacing: 20) {
+            SectionCard(
+                title: L10n.tr("Essential details"),
+                subtitle: L10n.tr("Only record what helps identification and value.")
+            ) {
+                VStack(alignment: .leading, spacing: 14) {
+                    labeledField(L10n.tr("Object name")) {
+                        TextField(L10n.tr("item.field.name"), text: $name)
+                            .brandInputField()
+                    }
+
+                    labeledField(L10n.tr("item.field.category")) {
+                        Button {
+                            showCategoryPicker = true
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: selectedCategoryIcon)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(BrandTheme.accentBright)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(selectedCategoryTitle)
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundStyle(BrandTheme.textPrimary)
+                                    if let selectedCategorySubtitle {
+                                        Text(selectedCategorySubtitle)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundStyle(BrandTheme.textSecondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(BrandTheme.textSecondary)
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(BrandTheme.surfaceElevated)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(BrandTheme.border, lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    HStack(spacing: 12) {
+                        labeledField(L10n.tr("item.field.currency")) {
+                            Text("\(selectedCurrency?.symbol ?? "€")  \(currency)")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .brandInputField()
+                        }
+
+                        labeledField(L10n.tr("item.field.purchase_price")) {
+                            TextField(L10n.tr("item.field.purchase_price"), text: $purchasePrice)
+                                .keyboardType(.decimalPad)
+                                .brandInputField()
+                        }
+                    }
+
+                    DatePicker(
+                        L10n.tr("item.field.year_purchased"),
+                        selection: $purchaseDate,
+                        in: ...Date(),
+                        displayedComponents: .date
+                    )
+
+                    labeledField(L10n.tr("item.field.serial_number")) {
+                        TextField(L10n.tr("item.field.serial_number"), text: $serialNumber)
+                            .brandInputField()
+                    }
+
+                    labeledField(L10n.tr("item.field.notes")) {
+                        TextField(L10n.tr("item.field.notes"), text: $notes, axis: .vertical)
+                            .lineLimit(4, reservesSpace: true)
+                            .brandInputField()
+                    }
+                }
+            }
+        }
+    }
+
+    private var reviewStep: some View {
+        VStack(spacing: 20) {
+            SectionCard(
+                title: L10n.tr("Review"),
+                subtitle: L10n.tr("Make sure the record is clear enough to retrieve quickly later.")
+            ) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 12) {
+                        ValueBadge(title: L10n.tr("Object"), value: name.isEmpty ? L10n.tr("Unnamed") : name)
+                        ValueBadge(title: L10n.tr("Category"), value: L10n.categoryName(category))
+                    }
+
+                    HStack(spacing: 12) {
+                        ValueBadge(title: L10n.tr("Evidence"), value: L10n.format("%lld photos", Int64(valuationPhotoData().count)))
+                        ValueBadge(title: L10n.tr("Documents"), value: "\(attachedDocuments.count + (existingItem?.documents.count ?? 0))")
+                    }
+
+                    ValueBadge(title: L10n.tr("Estimated value"), value: reviewValuationText, tone: valuationAmount == nil ? .warning : .neutral)
+                    StatusBadge(title: L10n.tr("Stored securely"), systemImage: "lock.shield", tone: .neutral)
+                }
+            }
+
+        }
+    }
+
+    private var primaryActionTitle: String {
+        if currentStep == .review {
+            return isEditing ? L10n.tr("common.save") : L10n.tr("common.add")
+        }
+        return L10n.tr("Continue")
+    }
+
+    private var primaryActionDisabled: Bool {
+        switch currentStep {
+        case .evidence:
+            return false
+        case .details:
+            return name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .review:
+            return name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving
+        }
+    }
+
+    private var reviewValuationText: String {
+        if let valuationAmount {
+            return CurrencyFormatter.format(valuationAmount, code: currency, symbol: selectedCurrency?.symbol)
+        }
+        return L10n.tr("Pending")
+    }
+
+    private func advanceStep() {
+        guard let next = AddFlowStep(rawValue: currentStep.rawValue + 1) else { return }
+        currentStep = next
+    }
+
+    private func retreatStep() {
+        guard let previous = AddFlowStep(rawValue: currentStep.rawValue - 1) else { return }
+        currentStep = previous
+    }
+
+    private func labeledField<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(BrandTheme.textSecondary)
+            content()
+        }
+    }
+
+    private var selectedCategoryTitle: String {
+        config.category(named: category).map {
+            L10n.categoryName($0.name, fallback: $0.displayName)
+        } ?? L10n.categoryName(category)
+    }
+
+    private var selectedCategorySubtitle: String? {
+        guard let selected = config.category(named: category) else { return nil }
+        guard let group = config.groupedCategories.first(where: {
+            $0.parent.name == selected.name || $0.children.contains(selected)
+        }) else {
+            return nil
+        }
+
+        guard group.parent.name != selected.name else { return L10n.tr("Main category") }
+        return L10n.categoryName(group.parent.name, fallback: group.parent.displayName)
+    }
+
+    private var selectedCategoryIcon: String {
+        config.category(named: category)?.icon ?? "archivebox"
     }
 
     private func saveItem() async {
@@ -590,5 +823,90 @@ struct DocumentPickerView: UIViewControllerRepresentable {
             onPick(url)
             url.stopAccessingSecurityScopedResource()
         }
+    }
+}
+
+private struct CategorySelectionView: View {
+    let groups: [AppConfigStore.CategoryGroup]
+    @Binding var selectedCategory: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(groups) { group in
+                    Section {
+                        categoryRow(
+                            category: group.parent,
+                            subtitle: group.children.isEmpty ? nil : L10n.tr("Main category")
+                        )
+
+                        ForEach(group.children) { child in
+                            categoryRow(
+                                category: child,
+                                subtitle: L10n.categoryName(group.parent.name, fallback: group.parent.displayName),
+                                indented: true
+                            )
+                        }
+                    } header: {
+                        if !group.children.isEmpty {
+                            Text(L10n.categoryName(group.parent.name, fallback: group.parent.displayName))
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(BrandTheme.backgroundGradient)
+            .navigationTitle(L10n.tr("Select category"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.tr("common.done")) { dismiss() }
+                }
+            }
+        }
+        .brandBackground()
+    }
+
+    private func categoryRow(
+        category: RemoteCategory,
+        subtitle: String?,
+        indented: Bool = false
+    ) -> some View {
+        Button {
+            selectedCategory = category.name
+            dismiss()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: category.icon ?? "archivebox")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(BrandTheme.accentBright)
+                    .frame(width: 22)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(L10n.categoryName(category.name, fallback: category.displayName))
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(BrandTheme.textPrimary)
+
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(BrandTheme.textSecondary)
+                    }
+                }
+
+                Spacer()
+
+                if selectedCategory == category.name {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(BrandTheme.accentCool)
+                }
+            }
+            .padding(.leading, indented ? 18 : 0)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Color.clear)
     }
 }

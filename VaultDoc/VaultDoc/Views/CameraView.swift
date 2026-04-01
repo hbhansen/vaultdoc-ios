@@ -27,7 +27,7 @@ struct CameraView: View {
                                 .font(.title2)
                                 .foregroundStyle(BrandTheme.textPrimary)
                                 .padding(12)
-                                .background(Circle().fill(BrandTheme.surface))
+                                .background(Circle().fill(BrandTheme.surfaceElevated))
                         }
                         .padding()
                         Spacer()
@@ -38,16 +38,14 @@ struct CameraView: View {
                                 .font(.title2)
                                 .foregroundStyle(viewModel.isFlashOn ? BrandTheme.accentBright : BrandTheme.textPrimary)
                                 .padding(12)
-                                .background(Circle().fill(BrandTheme.surface))
+                                .background(Circle().fill(BrandTheme.surfaceElevated))
                         }
                         .padding()
                     }
 
                     Spacer()
 
-                    HStack(spacing: 48) {
-                        Spacer()
-
+                    ZStack {
                         Button {
                             viewModel.capturePhoto()
                         } label: {
@@ -61,14 +59,18 @@ struct CameraView: View {
                             }
                         }
 
-                        Button {
-                            viewModel.toggleCamera()
-                        } label: {
-                            Image(systemName: "arrow.triangle.2.circlepath.camera")
-                                .font(.title)
-                                .foregroundStyle(BrandTheme.textPrimary)
-                                .padding(12)
-                                .background(Circle().fill(BrandTheme.surface))
+                        HStack {
+                            Spacer()
+
+                            Button {
+                                viewModel.toggleCamera()
+                            } label: {
+                                Image(systemName: "arrow.triangle.2.circlepath.camera")
+                                    .font(.title)
+                                    .foregroundStyle(BrandTheme.textPrimary)
+                                    .padding(12)
+                                    .background(Circle().fill(BrandTheme.surfaceElevated))
+                            }
                         }
                     }
                     .padding(.horizontal, 32)

@@ -10,22 +10,22 @@ struct BiometricAuthService {
         var buttonTitle: String {
             switch self {
             case .faceID:
-                return "Continue with Face ID"
+                return L10n.tr("biometric.button.face_id")
             case .touchID:
-                return "Continue with Touch ID"
+                return L10n.tr("biometric.button.touch_id")
             case .none:
-                return "Continue"
+                return L10n.tr("Continue")
             }
         }
 
         var promptReason: String {
             switch self {
             case .faceID:
-                return "Use Face ID to unlock VaultDoc."
+                return L10n.tr("biometric.prompt.face_id")
             case .touchID:
-                return "Use Touch ID to unlock VaultDoc."
+                return L10n.tr("biometric.prompt.touch_id")
             case .none:
-                return "Unlock VaultDoc."
+                return L10n.tr("biometric.prompt.default")
             }
         }
     }
@@ -49,7 +49,7 @@ struct BiometricAuthService {
 
     static func authenticate() async throws {
         let context = LAContext()
-        context.localizedCancelTitle = "Cancel"
+        context.localizedCancelTitle = L10n.tr("Cancel")
 
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
@@ -71,9 +71,9 @@ enum BiometricAuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unavailable:
-            return "Face ID or Touch ID is not available on this device."
+            return L10n.tr("biometric.error.unavailable")
         case .failed:
-            return "Biometric authentication failed."
+            return L10n.tr("biometric.error.failed")
         }
     }
 }

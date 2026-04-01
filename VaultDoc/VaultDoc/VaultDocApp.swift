@@ -44,13 +44,12 @@ struct VaultDocApp: App {
                         .zIndex(1)
                 }
             }
-            .id(configStore.brandAppearance)
             .id(languageSettings.selectedLanguage)
             .environment(configStore)
             .environment(AuthService.shared)
             .environment(languageSettings)
             .environment(\.locale, languageSettings.locale)
-            .tint(BrandTheme.accent)
+            .tint(BrandTheme.accentPrimary)
             .onOpenURL { url in
                 AuthService.shared.recordIncomingURL(url)
                 Task {
@@ -66,7 +65,7 @@ struct VaultDocApp: App {
                     supabaseURL: Config.Supabase.url,
                     supabaseKey: Config.Supabase.anonKey
                 )
-                await configStore.applyPersistedBrandAppearance()
+                BrandTheme.applyUIKitAppearance()
                 await minimumDisplayTask.value
                 withAnimation(.easeOut(duration: 0.45)) {
                     showsOpeningSplash = false

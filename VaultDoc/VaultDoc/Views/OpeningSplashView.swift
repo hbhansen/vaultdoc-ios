@@ -18,7 +18,7 @@ struct OpeningSplashView: View {
                     .ignoresSafeArea()
 
                 Circle()
-                    .fill(BrandTheme.accent.opacity(0.18))
+                    .fill(BrandTheme.accentPrimary.opacity(0.18))
                     .frame(width: 280, height: 280)
                     .blur(radius: 56)
                     .offset(x: geometry.size.width * 0.32, y: -geometry.size.height * 0.22)
@@ -34,7 +34,7 @@ struct OpeningSplashView: View {
 
                     ZStack {
                         Circle()
-                            .fill(BrandTheme.elevatedSurface.opacity(0.65))
+                            .fill(BrandTheme.surfaceElevated.opacity(0.65))
                             .frame(width: outerSize, height: outerSize)
                             .overlay(
                                 Circle()
@@ -47,14 +47,14 @@ struct OpeningSplashView: View {
 
                         BrandMark(size: iconSize)
                     }
-                    .shadow(color: BrandTheme.accent.opacity(0.16), radius: 28, y: 16)
+                    .shadow(color: BrandTheme.accentPrimary.opacity(0.16), radius: 28, y: 16)
 
                     VStack(spacing: 12) {
                         Text(L10n.tr("app.name"))
                             .font(.system(size: isCompactHeight ? 34 : 40, weight: .black, design: .rounded))
                             .foregroundStyle(BrandTheme.textPrimary)
 
-                        Text("Secure records for the moments that matter.")
+                        Text(L10n.tr("Secure records for the moments that matter."))
                             .font(.system(size: isCompactHeight ? 15 : 17, weight: .medium, design: .rounded))
                             .foregroundStyle(BrandTheme.textSecondary)
                             .multilineTextAlignment(.center)
@@ -73,7 +73,7 @@ struct OpeningSplashView: View {
                                     .frame(width: 74, height: 5)
                             }
 
-                        Text("Preparing your vault")
+                        Text(L10n.tr("Preparing your vault"))
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(BrandTheme.textSecondary)
                             .tracking(0.3)

@@ -16,22 +16,22 @@ struct ItemDetailView: View {
     @State private var previewDocument: PreviewDocument?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 20) {
                 photoCarousel
-                    .frame(height: item.photos.isEmpty ? 200 : 280)
+                    .frame(height: item.photos.isEmpty ? 180 : 260)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
-                VStack(spacing: 16) {
-                    valueCard
-                    infoGrid
-                    photoStrip
-                    documentsSection
-                }
-                .padding()
+                headerSection
+                evidenceSection
+                metadataSection
+                valuationSection
             }
+            .padding(20)
+            .padding(.bottom, 32)
         }
         .navigationTitle(item.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .brandBackground()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -90,23 +90,21 @@ struct ItemDetailView: View {
         }
     }
 
-    // MARK: - Photo Carousel
-
     private var photoCarousel: some View {
         Group {
             if item.photos.isEmpty {
-                ZStack {
-                    BrandTheme.accentBright.opacity(0.10)
-                        .overlay(BrandTheme.surface)
-                    VStack(spacing: 8) {
-                        Image(systemName: item.categoryIcon)
-                            .font(.system(size: 64))
-                            .foregroundStyle(BrandTheme.accentGradient)
-                        Text(L10n.tr("item_detail.no_photos_yet"))
-                            .font(.caption)
-                            .foregroundStyle(BrandTheme.textSecondary)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(BrandTheme.surface)
+                    .overlay {
+                        VStack(spacing: 10) {
+                            Image(systemName: item.categoryIcon)
+                                .font(.system(size: 42, weight: .semibold))
+                                .foregroundStyle(BrandTheme.accentBright)
+                            Text(L10n.tr("item_detail.no_photos_yet"))
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(BrandTheme.textSecondary)
+                        }
                     }
-                }
             } else {
                 TabView(selection: $selectedPhotoIndex) {
                     ForEach(Array(item.photos.enumerated()), id: \.offset) { idx, photo in
@@ -114,178 +112,222 @@ struct ItemDetailView: View {
                             .tag(idx)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .always))
+                .tabViewStyle(.page(indexDisplayMode: .automatic))
             }
         }
-        .clipped()
     }
 
-    // MARK: - Value Card
-
-    private var valueCard: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("VALUATION")
-                    .font(.caption2).bold()
-                    .foregroundStyle(.secondary)
-                if viewModel.isRequestingEstimate && item.valuationAmount == 0 {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Analyzing photos")
-                            .font(.subheadline)
-                            .foregroundStyle(BrandTheme.textSecondary)
-                    }
-                } else if item.valuationAmount > 0 {
-                    Text(CurrencyFormatter.format(item.valuationAmount, for: item, config: config))
-                        .font(.title2).bold()
-                        .foregroundStyle(BrandTheme.accentBright)
-                } else {
-                    Text("Add photos to calculate")
-                        .font(.subheadline)
-                        .foregroundStyle(BrandTheme.textSecondary)
+    private var headerSection: some View {
+        SectionCard(
+            title: item.name,
+            subtitle: L10n.tr("Proof of ownership and recovery-ready records.")
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    ValueBadge(
+                        title: L10n.tr("Estimated value"),
+                        value: valuationText,
+                        tone: item.valuationAmount > 0 ? .neutral : .warning
+                    )
+                    ValueBadge(
+                        title: L10n.tr("Status"),
+                        value: item.vaultStatus.title,
+                        tone: item.vaultStatus.tone
+                    )
                 }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                guard !viewModel.isRequestingEstimate else { return }
-                viewModel.requestAIEstimate(for: item)
-            }
-            Spacer()
-            Divider().frame(height: 40)
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(L10n.tr("item.field.purchase_price").uppercased())
-                    .font(.caption2).bold()
-                    .foregroundStyle(.secondary)
-                Text(CurrencyFormatter.format(item.purchasePrice, for: item, config: config))
-                    .font(.title2).bold()
-                    .foregroundStyle(BrandTheme.accentGradient)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(BrandTheme.surface)
-                .stroke(BrandTheme.border, lineWidth: 1)
-        )
-    }
 
-    // MARK: - Info Grid
-
-    private var infoGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            InfoCell(label: L10n.tr("item.field.category"), value: item.categoryDisplayName, icon: item.categoryIcon)
-            InfoCell(label: L10n.tr("item.field.year_purchased"), value: YearFormatter.display(date: item.purchaseDate), icon: "calendar")
-            InfoCell(label: L10n.tr("item.field.purchase_price"), value: CurrencyFormatter.format(item.purchasePrice, for: item, config: config), icon: "banknote")
-            InfoCell(label: L10n.tr("item.field.serial_number"),
-                     value: item.serialNumber.isEmpty ? L10n.placeholderDash : item.serialNumber,
-                     icon: "number")
-        }
-    }
-
-    // MARK: - Photo Strip
-
-    private var photoStrip: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(L10n.tr("item_detail.photos"))
-                    .font(.headline)
-                Spacer()
-                Button {
-                    showCamera = true
-                } label: {
-                    Image(systemName: "plus.circle")
-                        .foregroundStyle(.teal)
-                        .foregroundStyle(BrandTheme.accentBright)
-                }
-            }
-            if item.photos.isEmpty {
-                Text(L10n.tr("item_detail.no_photos_attached"))
-                    .font(.caption)
-                    .foregroundStyle(BrandTheme.textSecondary)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Array(item.photos.enumerated()), id: \.offset) { idx, photo in
-                            CachedDataImage(data: photo.imageData, cacheKey: photo.id.uuidString, maxDimension: 72)
-                                .frame(width: 72, height: 72)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .onTapGesture {
-                                    selectedPhotoIndex = idx
-                                }
-                        }
-                        Button {
-                            showCamera = true
-                        } label: {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(BrandTheme.surface)
-                                .frame(width: 72, height: 72)
-                                .overlay {
-                                    Image(systemName: "plus")
-                                        .foregroundStyle(BrandTheme.accentBright)
-                                        .font(.title2)
-                                }
-                        }
-                    }
+                HStack(spacing: 8) {
+                    StatusBadge(title: L10n.tr("Encrypted"), systemImage: "lock.shield", tone: .neutral)
+                    StatusBadge(
+                        title: item.aiEstimate == nil ? L10n.tr("Manual review") : L10n.tr("AI assisted"),
+                        systemImage: item.aiEstimate == nil ? "person.crop.square" : "brain",
+                        tone: item.aiEstimate == nil ? .warning : .positive
+                    )
                 }
             }
         }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(BrandTheme.surface))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(BrandTheme.border, lineWidth: 1))
     }
 
-    // MARK: - Documents
-
-    private var documentsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.tr("item_detail.documents"))
-                .font(.headline)
-            if item.documents.isEmpty {
-                Text(L10n.tr("item_detail.no_documents_attached"))
-                    .font(.caption)
-                    .foregroundStyle(BrandTheme.textSecondary)
-            } else {
-                ForEach(item.documents) { doc in
+    private var evidenceSection: some View {
+        SectionCard(
+            title: L10n.tr("Evidence"),
+            subtitle: L10n.tr("Images and documents supporting ownership.")
+        ) {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Image(systemName: "doc.fill")
-                            .foregroundStyle(BrandTheme.accentBright)
-                        VStack(alignment: .leading) {
+                        Text(L10n.tr("item_detail.photos"))
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(BrandTheme.textPrimary)
+                        Spacer()
+                        Button(L10n.tr("Add photo")) {
+                            showCamera = true
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(BrandTheme.accentBright)
+                    }
+
+                    if item.photos.isEmpty {
+                        Text(L10n.tr("item_detail.no_photos_attached"))
+                            .font(.system(size: 15))
+                            .foregroundStyle(BrandTheme.textSecondary)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(Array(item.photos.enumerated()), id: \.offset) { idx, photo in
+                                    CachedDataImage(data: photo.imageData, cacheKey: photo.id.uuidString, maxDimension: 88)
+                                        .frame(width: 88, height: 88)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .onTapGesture {
+                                            selectedPhotoIndex = idx
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Divider()
+                    .overlay(BrandTheme.border)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(L10n.tr("item_detail.documents"))
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(BrandTheme.textPrimary)
+
+                    if item.documents.isEmpty {
+                        Text(L10n.tr("item_detail.no_documents_attached"))
+                            .font(.system(size: 15))
+                            .foregroundStyle(BrandTheme.textSecondary)
+                    } else {
+                        ForEach(item.documents) { doc in
                             Button {
                                 previewDocument = PreviewDocument.make(from: doc)
                             } label: {
-                                Text(doc.filename)
-                                    .font(.subheadline)
-                                    .lineLimit(1)
-                                    .foregroundStyle(BrandTheme.accentBright)
+                                HStack(spacing: 12) {
+                                    Image(systemName: "doc.text")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(BrandTheme.accentBright)
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(doc.filename)
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundStyle(BrandTheme.textPrimary)
+                                            .lineLimit(1)
+                                        Text(doc.formattedSize)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(BrandTheme.textSecondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "arrow.up.right.square")
+                                        .foregroundStyle(BrandTheme.textSecondary)
+                                }
+                                .padding(.vertical, 8)
                             }
-                            Text(doc.formattedSize)
-                                .font(.caption)
-                                .foregroundStyle(BrandTheme.textSecondary)
+                            .buttonStyle(.plain)
                         }
-                        Spacer()
                     }
-                    .padding(.vertical, 4)
-                    Divider()
                 }
             }
-            Button {
-                viewModel.generatePDF(for: item)
-            } label: {
-                Label(L10n.tr("item_detail.export_pdf"), systemImage: "arrow.up.doc")
-                    .font(.subheadline)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(BrandTheme.accentGradient)
-                    .foregroundStyle(BrandTheme.actionForeground)
-                    .clipShape(Capsule())
-            }
-            .padding(.top, 4)
         }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(BrandTheme.surface))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(BrandTheme.border, lineWidth: 1))
+    }
+
+    private var metadataSection: some View {
+        SectionCard(
+            title: L10n.tr("Metadata"),
+            subtitle: L10n.tr("The details that matter in urgent situations.")
+        ) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                InfoCell(label: L10n.tr("item.field.category"), value: item.categoryDisplayName, icon: item.categoryIcon)
+                InfoCell(label: L10n.tr("item.field.year_purchased"), value: YearFormatter.display(date: item.purchaseDate), icon: "calendar")
+                InfoCell(label: L10n.tr("item.field.purchase_price"), value: CurrencyFormatter.format(item.purchasePrice, for: item, config: config), icon: "banknote")
+                InfoCell(
+                    label: L10n.tr("item.field.serial_number"),
+                    value: item.serialNumber.isEmpty ? L10n.placeholderDash : item.serialNumber,
+                    icon: "number"
+                )
+            }
+        }
+    }
+
+    private var valuationSection: some View {
+        SectionCard(
+            title: L10n.tr("Valuation"),
+            subtitle: L10n.tr("Conservative estimate based on available evidence.")
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                if viewModel.isRequestingEstimate && item.valuationAmount == 0 {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(L10n.tr("Analyzing evidence"))
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(BrandTheme.textSecondary)
+                    }
+                } else {
+                    Text(valuationText)
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(BrandTheme.textPrimary)
+                }
+
+                HStack(spacing: 12) {
+                    ValueBadge(title: L10n.tr("Confidence"), value: confidenceTitle, tone: confidenceTone)
+                    ValueBadge(title: L10n.tr("Signals"), value: supportingSignalsText)
+                }
+
+                Button {
+                    guard !viewModel.isRequestingEstimate else { return }
+                    viewModel.requestAIEstimate(for: item)
+                } label: {
+                    Text(item.photos.isEmpty ? L10n.tr("Add evidence to estimate value") : L10n.tr("Refresh estimate"))
+                }
+                .buttonStyle(PrimaryActionButtonStyle())
+                .disabled(item.photos.isEmpty || viewModel.isRequestingEstimate)
+
+                Button {
+                    viewModel.generatePDF(for: item)
+                } label: {
+                    Text(L10n.tr("item_detail.export_pdf"))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(BrandTheme.accentBright)
+                }
+            }
+        }
+    }
+
+    private var valuationText: String {
+        if item.valuationAmount > 0 {
+            return CurrencyFormatter.format(item.valuationAmount, for: item, config: config)
+        }
+        return L10n.tr("Pending")
+    }
+
+    private var confidenceTitle: String {
+        switch item.vaultStatus {
+        case .verified:
+            return L10n.tr("Higher")
+        case .incomplete:
+            return L10n.tr("Moderate")
+        case .missingEvidence:
+            return L10n.tr("Low")
+        }
+    }
+
+    private var confidenceTone: VaultStatusTone {
+        switch item.vaultStatus {
+        case .verified:
+            return .positive
+        case .incomplete:
+            return .warning
+        case .missingEvidence:
+            return .critical
+        }
+    }
+
+    private var supportingSignalsText: String {
+        L10n.format("%lld photos • %lld docs", Int64(item.photos.count), Int64(item.documents.count))
     }
 }
 
@@ -295,23 +337,24 @@ struct InfoCell: View {
     let icon: String
 
     var body: some View {
-        HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(BrandTheme.accentBright)
-                .frame(width: 24)
-            VStack(alignment: .leading, spacing: 2) {
+
+            VStack(alignment: .leading, spacing: 4) {
                 Text(label)
-                    .font(.caption2)
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(BrandTheme.textSecondary)
                 Text(value)
-                    .font(.subheadline)
-                    .lineLimit(1)
+                    .font(.system(size: 16, weight: .medium))
+                    .lineLimit(2)
                     .foregroundStyle(BrandTheme.textPrimary)
             }
-            Spacer()
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 10).fill(BrandTheme.elevatedSurface))
+        .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 14).fill(BrandTheme.surfaceElevated))
     }
 }
 

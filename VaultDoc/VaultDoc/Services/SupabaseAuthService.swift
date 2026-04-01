@@ -247,11 +247,11 @@ enum PasswordResetError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidConfiguration:
-            return "Missing Supabase configuration. Add SUPABASE_ANON_KEY to the scheme environment or Secrets.plist."
+            return L10n.tr("supabase.error.missing_configuration")
         case .malformedRecoveryLink:
-            return "This password reset link is invalid or incomplete."
+            return L10n.tr("supabase.reset_link.invalid")
         case .invalidRecoveryType:
-            return "This link is not a valid password recovery link."
+            return L10n.tr("supabase.reset_link.invalid_type")
         }
     }
 }

@@ -1,141 +1,134 @@
 import SwiftUI
+import UIKit
 
-struct BrandPalette {
-    let backgroundTop: Color
-    let backgroundMiddle: Color
-    let backgroundBottom: Color
-    let surface: Color
-    let elevatedSurface: Color
-    let border: Color
-    let textPrimary: Color
-    let textSecondary: Color
-    let accent: Color
-    let accentBright: Color
-    let accentCool: Color
-    let accentMuted: Color
-    let actionForeground: Color
-    let alert: Color
+enum ThemeToken: CaseIterable {
+    case backgroundPrimary
+    case backgroundSecondary
+    case surface
+    case surfaceElevated
+    case border
+    case textPrimary
+    case textSecondary
+    case accentPrimary
+    case accentBright
+    case accentCool
+    case accentMuted
+    case actionForeground
+    case alert
 }
 
-enum BrandAppearance: String, CaseIterable, Identifiable, Codable {
-    case classic
-    case midnight
-    case sunrise
+private struct ThemePalette {
+    let gradientStops: [UIColor]
+    let colors: [ThemeToken: UIColor]
+    let shadow: UIColor
+    let positive: UIColor
+    let warning: UIColor
 
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .classic:
-            return "Classic"
-        case .midnight:
-            return "Midnight"
-        case .sunrise:
-            return "Sunrise"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .classic:
-            return "Cool blue and glass"
-        case .midnight:
-            return "Deep slate and neon"
-        case .sunrise:
-            return "Warm gold and coral"
-        }
-    }
-
-    var appIconName: String? {
-        switch self {
-        case .classic:
-            return nil
-        case .midnight:
-            return "AppIconMidnight"
-        case .sunrise:
-            return "AppIconSunrise"
-        }
-    }
-
-    var palette: BrandPalette {
-        switch self {
-        case .classic:
-            return BrandPalette(
-                backgroundTop: Color(red: 0.95, green: 0.97, blue: 1.00),
-                backgroundMiddle: Color(red: 0.90, green: 0.94, blue: 0.99),
-                backgroundBottom: Color(red: 0.84, green: 0.89, blue: 0.97),
-                surface: Color.white.opacity(0.72),
-                elevatedSurface: Color.white.opacity(0.90),
-                border: Color(red: 0.33, green: 0.46, blue: 0.72).opacity(0.20),
-                textPrimary: Color(red: 0.09, green: 0.14, blue: 0.28),
-                textSecondary: Color(red: 0.31, green: 0.40, blue: 0.58),
-                accent: Color(red: 0.14, green: 0.23, blue: 0.60),
-                accentBright: Color(red: 0.32, green: 0.60, blue: 0.88),
-                accentCool: Color(red: 0.21, green: 0.73, blue: 0.76),
-                accentMuted: Color(red: 0.56, green: 0.67, blue: 0.85),
-                actionForeground: .white,
-                alert: Color(red: 0.86, green: 0.15, blue: 0.15)
-            )
-        case .midnight:
-            return BrandPalette(
-                backgroundTop: Color(red: 0.06, green: 0.08, blue: 0.14),
-                backgroundMiddle: Color(red: 0.09, green: 0.11, blue: 0.22),
-                backgroundBottom: Color(red: 0.05, green: 0.17, blue: 0.26),
-                surface: Color.white.opacity(0.10),
-                elevatedSurface: Color.white.opacity(0.16),
-                border: Color(red: 0.45, green: 0.67, blue: 0.95).opacity(0.26),
-                textPrimary: Color(red: 0.92, green: 0.96, blue: 1.00),
-                textSecondary: Color(red: 0.64, green: 0.76, blue: 0.90),
-                accent: Color(red: 0.28, green: 0.49, blue: 0.95),
-                accentBright: Color(red: 0.48, green: 0.78, blue: 1.00),
-                accentCool: Color(red: 0.23, green: 0.89, blue: 0.80),
-                accentMuted: Color(red: 0.45, green: 0.53, blue: 0.88),
-                actionForeground: .white,
-                alert: Color(red: 1.00, green: 0.47, blue: 0.47)
-            )
-        case .sunrise:
-            return BrandPalette(
-                backgroundTop: Color(red: 1.00, green: 0.96, blue: 0.91),
-                backgroundMiddle: Color(red: 1.00, green: 0.90, blue: 0.82),
-                backgroundBottom: Color(red: 0.98, green: 0.79, blue: 0.68),
-                surface: Color.white.opacity(0.68),
-                elevatedSurface: Color.white.opacity(0.84),
-                border: Color(red: 0.78, green: 0.44, blue: 0.29).opacity(0.18),
-                textPrimary: Color(red: 0.31, green: 0.16, blue: 0.10),
-                textSecondary: Color(red: 0.54, green: 0.31, blue: 0.22),
-                accent: Color(red: 0.79, green: 0.34, blue: 0.18),
-                accentBright: Color(red: 0.98, green: 0.63, blue: 0.29),
-                accentCool: Color(red: 0.91, green: 0.52, blue: 0.50),
-                accentMuted: Color(red: 0.94, green: 0.74, blue: 0.43),
-                actionForeground: .white,
-                alert: Color(red: 0.72, green: 0.16, blue: 0.11)
-            )
-        }
+    func color(_ token: ThemeToken) -> UIColor {
+        colors[token] ?? .clear
     }
 }
 
 enum BrandTheme {
-    static var currentAppearance: BrandAppearance { AppConfigStore.shared.brandAppearance }
-    static var palette: BrandPalette { currentAppearance.palette }
+    private static let lightPalette = ThemePalette(
+        gradientStops: [
+            UIColor(hex: 0xEDF2F7),
+            UIColor(hex: 0xE5EBF2),
+            UIColor(hex: 0xDCE3EC)
+        ],
+        colors: [
+            .backgroundPrimary: UIColor(hex: 0xEDF2F7),
+            .backgroundSecondary: UIColor(hex: 0xE5EBF2),
+            .surface: UIColor(hex: 0xFFFFFF, alpha: 0.88),
+            .surfaceElevated: UIColor(hex: 0xFFFFFF, alpha: 0.96),
+            .border: UIColor(hex: 0x5E7391, alpha: 0.16),
+            .textPrimary: UIColor(hex: 0x152033),
+            .textSecondary: UIColor(hex: 0x556274),
+            .accentPrimary: UIColor(hex: 0x1C4FD8),
+            .accentBright: UIColor(hex: 0x63A6FA),
+            .accentCool: UIColor(hex: 0x14B8A6),
+            .accentMuted: UIColor(hex: 0x94A8C4),
+            .actionForeground: UIColor(hex: 0xFFFFFF),
+            .alert: UIColor(hex: 0xDB2626)
+        ],
+        shadow: UIColor(hex: 0x18263A, alpha: 0.05),
+        positive: UIColor(hex: 0x14B8A6),
+        warning: UIColor(hex: 0x1C4FD8)
+    )
 
-    static var backgroundTop: Color { palette.backgroundTop }
-    static var backgroundMiddle: Color { palette.backgroundMiddle }
-    static var backgroundBottom: Color { palette.backgroundBottom }
-    static var surface: Color { palette.surface }
-    static var elevatedSurface: Color { palette.elevatedSurface }
-    static var border: Color { palette.border }
-    static var textPrimary: Color { palette.textPrimary }
-    static var textSecondary: Color { palette.textSecondary }
-    static var accent: Color { palette.accent }
-    static var accentBright: Color { palette.accentBright }
-    static var accentCool: Color { palette.accentCool }
-    static var accentMuted: Color { palette.accentMuted }
-    static var actionForeground: Color { palette.actionForeground }
-    static var alert: Color { palette.alert }
+    private static let darkPalette = ThemePalette(
+        gradientStops: [
+            UIColor(hex: 0x0A1222),
+            UIColor(hex: 0x0D1830),
+            UIColor(hex: 0x172150)
+        ],
+        colors: [
+            .backgroundPrimary: UIColor(hex: 0x0A1222),
+            .backgroundSecondary: UIColor(hex: 0x0D1830),
+            .surface: UIColor(hex: 0xFFFFFF, alpha: 0.08),
+            .surfaceElevated: UIColor(hex: 0xFFFFFF, alpha: 0.14),
+            .border: UIColor(hex: 0x5E7391, alpha: 0.24),
+            .textPrimary: UIColor(hex: 0xF7FAFE),
+            .textSecondary: UIColor(hex: 0xCDD6E0),
+            .accentPrimary: UIColor(hex: 0x1C4FD8),
+            .accentBright: UIColor(hex: 0x63A6FA),
+            .accentCool: UIColor(hex: 0x14B8A6),
+            .accentMuted: UIColor(hex: 0x7F94B5),
+            .actionForeground: UIColor(hex: 0xFFFFFF),
+            .alert: UIColor(hex: 0xDB2626)
+        ],
+        shadow: UIColor(hex: 0x020611, alpha: 0.12),
+        positive: UIColor(hex: 0x14B8A6),
+        warning: UIColor(hex: 0x63A6FA)
+    )
+
+    private static func palette(for colorScheme: ColorScheme) -> ThemePalette {
+        colorScheme == .dark ? darkPalette : lightPalette
+    }
+
+    private static func palette(for traitCollection: UITraitCollection) -> ThemePalette {
+        traitCollection.userInterfaceStyle == .dark ? darkPalette : lightPalette
+    }
+
+    static func color(_ token: ThemeToken) -> Color {
+        Color(uiColor: uiColor(token))
+    }
+
+    static func uiColor(_ token: ThemeToken) -> UIColor {
+        UIColor { traitCollection in
+            palette(for: traitCollection).color(token)
+        }
+    }
+
+    static func uiColor(_ token: ThemeToken, alpha: CGFloat) -> UIColor {
+        UIColor { traitCollection in
+            palette(for: traitCollection).color(token).withAlphaComponent(alpha)
+        }
+    }
+
+    static var backgroundPrimary: Color { color(.backgroundPrimary) }
+    static var backgroundSecondary: Color { color(.backgroundSecondary) }
+    static var surface: Color { color(.surface) }
+    static var surfaceElevated: Color { color(.surfaceElevated) }
+    static var border: Color { color(.border) }
+    static var textPrimary: Color { color(.textPrimary) }
+    static var textSecondary: Color { color(.textSecondary) }
+    static var accentPrimary: Color { color(.accentPrimary) }
+    static var accentBright: Color { color(.accentBright) }
+    static var accentCool: Color { color(.accentCool) }
+    static var accentMuted: Color { color(.accentMuted) }
+    static var actionForeground: Color { color(.actionForeground) }
+    static var alert: Color { color(.alert) }
+    static var statusPositive: Color { Color(uiColor: statusPositiveUIColor) }
+    static var statusWarning: Color { Color(uiColor: statusWarningUIColor) }
 
     static var backgroundGradient: LinearGradient {
         LinearGradient(
-            colors: [backgroundTop, backgroundMiddle, backgroundBottom],
+            colors: [
+                Color(uiColor: dynamicGradientStop(index: 0)),
+                Color(uiColor: dynamicGradientStop(index: 1)),
+                Color(uiColor: dynamicGradientStop(index: 2))
+            ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -143,7 +136,7 @@ enum BrandTheme {
 
     static var accentGradient: LinearGradient {
         LinearGradient(
-            colors: [accent, accentBright, accentCool],
+            colors: [accentPrimary, accentBright, accentCool],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -157,38 +150,171 @@ enum BrandTheme {
         )
     }
 
-    static var sunburstGradient: LinearGradient {
+    static var mutedAccentGradient: LinearGradient {
         LinearGradient(
-            colors: [accentMuted, accentBright, accentCool],
-            startPoint: .leading,
-            endPoint: .trailing
+            colors: [accentMuted, accentBright],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
         )
     }
 
     static var heroGradient: RadialGradient {
         RadialGradient(
             colors: [
-                accentBright.opacity(0.28),
-                accent.opacity(0.16),
+                accentBright.opacity(0.08),
+                accentPrimary.opacity(0.05),
                 .clear
             ],
             center: .topLeading,
-            startRadius: 12,
-            endRadius: 360
+            startRadius: 16,
+            endRadius: 320
         )
     }
 
     static var secondaryGlow: RadialGradient {
         RadialGradient(
             colors: [
-                accentCool.opacity(0.16),
-                accentMuted.opacity(0.14),
+                accentCool.opacity(0.06),
+                accentMuted.opacity(0.05),
                 .clear
             ],
             center: .bottomTrailing,
             startRadius: 10,
-            endRadius: 320
+            endRadius: 280
         )
+    }
+
+    static var glassFill: LinearGradient {
+        LinearGradient(
+            colors: [surfaceElevated, surface],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    static var chromeMaterial: Material {
+        .ultraThinMaterial
+    }
+
+    static var shadowColor: Color {
+        Color(uiColor: UIColor {
+            palette(for: $0).shadow
+        })
+    }
+
+    static var statusPositiveUIColor: UIColor {
+        UIColor { palette(for: $0).positive }
+    }
+
+    static var statusWarningUIColor: UIColor {
+        UIColor { palette(for: $0).warning }
+    }
+
+    static func applyUIKitAppearance() {
+        let navigationChromeColor = UIColor { traitCollection in
+            let currentPalette = palette(for: traitCollection)
+            let alpha: CGFloat = traitCollection.userInterfaceStyle == .dark ? 0.94 : 0.84
+            return currentPalette.color(.backgroundSecondary).withAlphaComponent(alpha)
+        }
+        let toolbarChromeColor = UIColor { traitCollection in
+            let currentPalette = palette(for: traitCollection)
+            let alpha: CGFloat = traitCollection.userInterfaceStyle == .dark ? 0.92 : 0.82
+            return currentPalette.color(.backgroundSecondary).withAlphaComponent(alpha)
+        }
+        let tabChromeColor = UIColor { traitCollection in
+            let currentPalette = palette(for: traitCollection)
+            let alpha: CGFloat = traitCollection.userInterfaceStyle == .dark ? 0.96 : 0.88
+            return currentPalette.color(.backgroundSecondary).withAlphaComponent(alpha)
+        }
+
+        let navigationAppearance = UINavigationBarAppearance()
+        navigationAppearance.configureWithTransparentBackground()
+        navigationAppearance.backgroundEffect = nil
+        navigationAppearance.backgroundColor = navigationChromeColor
+        navigationAppearance.shadowColor = uiColor(.border)
+        navigationAppearance.titleTextAttributes = [
+            .foregroundColor: uiColor(.textPrimary)
+        ]
+        navigationAppearance.largeTitleTextAttributes = [
+            .foregroundColor: uiColor(.textPrimary)
+        ]
+
+        let navigationBar = UINavigationBar.appearance()
+        navigationBar.standardAppearance = navigationAppearance
+        navigationBar.scrollEdgeAppearance = navigationAppearance
+        navigationBar.compactAppearance = navigationAppearance
+        navigationBar.tintColor = uiColor(.accentPrimary)
+
+        let toolbarAppearance = UIToolbarAppearance()
+        toolbarAppearance.configureWithTransparentBackground()
+        toolbarAppearance.backgroundEffect = nil
+        toolbarAppearance.backgroundColor = toolbarChromeColor
+        toolbarAppearance.shadowColor = uiColor(.border)
+
+        let toolbar = UIToolbar.appearance()
+        toolbar.standardAppearance = toolbarAppearance
+        if #available(iOS 15.0, *) {
+            toolbar.scrollEdgeAppearance = toolbarAppearance
+        }
+        toolbar.tintColor = uiColor(.accentPrimary)
+
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithTransparentBackground()
+        tabBarAppearance.backgroundEffect = nil
+        tabBarAppearance.backgroundColor = tabChromeColor
+        tabBarAppearance.shadowColor = uiColor(.border)
+
+        let tabBar = UITabBar.appearance()
+        tabBar.standardAppearance = tabBarAppearance
+        if #available(iOS 15.0, *) {
+            tabBar.scrollEdgeAppearance = tabBarAppearance
+        }
+        tabBar.tintColor = uiColor(.accentPrimary)
+
+        UISegmentedControl.appearance().selectedSegmentTintColor = uiColor(.accentPrimary)
+        UISegmentedControl.appearance().setTitleTextAttributes(
+            [.foregroundColor: uiColor(.actionForeground)],
+            for: .selected
+        )
+        UISegmentedControl.appearance().setTitleTextAttributes(
+            [.foregroundColor: uiColor(.textSecondary)],
+            for: .normal
+        )
+
+        UITableView.appearance().backgroundColor = .clear
+        UICollectionView.appearance().backgroundColor = .clear
+        UISearchBar.appearance().tintColor = uiColor(.accentPrimary)
+    }
+
+    private static func dynamicGradientStop(index: Int) -> UIColor {
+        UIColor { traitCollection in
+            let stops = palette(for: traitCollection).gradientStops
+            return stops[min(max(index, 0), stops.count - 1)]
+        }
+    }
+}
+
+struct ThemeAppearanceConfigurator: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> ThemeAppearanceViewController {
+        ThemeAppearanceViewController()
+    }
+
+    func updateUIViewController(_ uiViewController: ThemeAppearanceViewController, context: Context) {
+        uiViewController.applyThemeAppearance()
+    }
+}
+
+final class ThemeAppearanceViewController: UIViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        applyThemeAppearance()
+    }
+
+    func applyThemeAppearance() {
+        BrandTheme.applyUIKitAppearance()
+        overrideUserInterfaceStyle = .unspecified
     }
 }
 
@@ -198,21 +324,18 @@ struct BrandBackground: ViewModifier {
             .background {
                 ZStack {
                     BrandTheme.backgroundGradient.ignoresSafeArea()
-                    BrandTheme.heroGradient
-                        .ignoresSafeArea()
-                    BrandTheme.secondaryGlow
-                        .ignoresSafeArea()
+                    BrandTheme.heroGradient.ignoresSafeArea()
+                    BrandTheme.secondaryGlow.ignoresSafeArea()
                     Circle()
-                        .fill(BrandTheme.accentBright.opacity(0.12))
-                        .frame(width: 320, height: 320)
-                        .blur(radius: 56)
-                        .offset(x: -160, y: 250)
-                    Circle()
-                        .fill(BrandTheme.accentCool.opacity(0.14))
-                        .frame(width: 240, height: 240)
-                        .blur(radius: 48)
-                        .offset(x: 150, y: 270)
+                        .fill(BrandTheme.accentBright.opacity(0.03))
+                        .frame(width: 260, height: 260)
+                        .blur(radius: 50)
+                        .offset(x: -180, y: 260)
                 }
+            }
+            .background {
+                ThemeAppearanceConfigurator()
+                    .allowsHitTesting(false)
             }
     }
 }
@@ -222,19 +345,13 @@ struct BrandCard: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [BrandTheme.elevatedSurface, BrandTheme.surface],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(BrandTheme.glassFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
                             .stroke(BrandTheme.border, lineWidth: 1)
                     )
             )
-            .shadow(color: BrandTheme.accent.opacity(0.10), radius: 22, y: 12)
+            .shadow(color: BrandTheme.shadowColor, radius: 8, y: 3)
     }
 }
 
@@ -244,7 +361,7 @@ struct BrandInputField: ViewModifier {
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(BrandTheme.elevatedSurface)
+                    .fill(BrandTheme.surfaceElevated)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(BrandTheme.border, lineWidth: 1)
@@ -275,7 +392,7 @@ struct BrandMark: View {
     private var documentGlyph: some View {
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: size * 0.06, style: .continuous)
-                .fill(BrandTheme.accent)
+                .fill(BrandTheme.accentPrimary)
                 .frame(width: documentWidth, height: documentHeight)
 
             Path { path in
@@ -335,5 +452,14 @@ extension View {
 
     func brandInputField() -> some View {
         modifier(BrandInputField())
+    }
+}
+
+private extension UIColor {
+    convenience init(hex: UInt32, alpha: CGFloat = 1) {
+        let red = CGFloat((hex >> 16) & 0xFF) / 255
+        let green = CGFloat((hex >> 8) & 0xFF) / 255
+        let blue = CGFloat(hex & 0xFF) / 255
+        self.init(red: red, green: green, blue: blue, alpha: alpha)
     }
 }

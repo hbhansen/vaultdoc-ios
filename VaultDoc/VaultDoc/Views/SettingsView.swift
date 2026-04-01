@@ -18,7 +18,6 @@ struct SettingsView: View {
     @State private var isApplyingInvite = false
     @State private var isRemovingAccess = false
     @State private var sharingStatus: String?
-    @State private var selectedBrandAppearance: BrandAppearance = .classic
 
     var body: some View {
         NavigationStack {
@@ -32,9 +31,10 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(L10n.tr("settings.signed_in_as"))
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(BrandTheme.textSecondary)
                             Text(auth.userEmail)
                                 .font(.subheadline)
+                                .foregroundStyle(BrandTheme.textPrimary)
                         }
                     }
                     Button(role: .destructive) {
@@ -50,9 +50,9 @@ struct SettingsView: View {
 
                 Section {
                     if sharedAccessEntries.isEmpty {
-                        Text("Your inventory is currently private.")
+                        Text(L10n.tr("Your inventory is currently private."))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(BrandTheme.textSecondary)
                     } else {
                         ForEach(sharedAccessEntries) { entry in
                             HStack(alignment: .top, spacing: 12) {
@@ -64,7 +64,7 @@ struct SettingsView: View {
                                     Text(entry.email)
                                     Text(entry.status.title)
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(BrandTheme.textSecondary)
                                 }
 
                                 Spacer()
@@ -82,7 +82,7 @@ struct SettingsView: View {
                         }
                     }
 
-                    TextField("Family member email", text: $inviteEmail)
+                    TextField(L10n.tr("Family member email"), text: $inviteEmail)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
                         .autocorrectionDisabled()
@@ -92,7 +92,7 @@ struct SettingsView: View {
                             await sendInventoryInvite()
                         }
                     } label: {
-                        Label("Send family invite", systemImage: "person.badge.plus")
+                        Label(L10n.tr("Send family invite"), systemImage: "person.badge.plus")
                     }
                     .disabled(isSendingInvite || inviteEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
@@ -101,15 +101,15 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(invite.invitedByEmail)
                                     .font(.subheadline.weight(.semibold))
-                                Text("Invited you to join a shared family inventory.")
+                                Text(L10n.tr("Invited you to join a shared family inventory."))
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(BrandTheme.textSecondary)
                                 Button {
                                     Task {
                                         await accept(invite: invite)
                                     }
                                 } label: {
-                                    Label("Accept invite", systemImage: "checkmark.circle.fill")
+                                    Label(L10n.tr("Accept invite"), systemImage: "checkmark.circle.fill")
                                 }
                                 .disabled(isApplyingInvite)
                             }
@@ -117,25 +117,9 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Shared Inventory")
+                    Text(L10n.tr("Shared Inventory"))
                 } footer: {
-                    Text("Invited family members can add items to the same inventory after they accept the invite.")
-                }
-
-                // MARK: Current config
-                Section(L10n.format("settings.active_categories_count", Int64(config.categories.count))) {
-                    ForEach(config.categories) { cat in
-                        HStack {
-                            Image(systemName: cat.icon ?? "archivebox")
-                                .foregroundStyle(BrandTheme.accent)
-                                .frame(width: 24)
-                            Text(L10n.categoryName(cat.name, fallback: cat.displayName))
-                            Spacer()
-                            Text(cat.name)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    Text(L10n.tr("Invited family members can add items to the same inventory after they accept the invite."))
                 }
 
                 Section(L10n.format("settings.active_currencies_count", Int64(config.currencies.count))) {
@@ -145,35 +129,27 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(isSavingCurrency)
-
-                    ForEach(config.currencies) { cur in
-                        HStack {
-                            Text(cur.symbol)
-                                .font(.headline)
-                                .foregroundStyle(BrandTheme.accent)
-                                .frame(width: 32)
-                            Text(L10n.currencyName(code: cur.code, fallback: cur.name))
-                            Spacer()
-                            Text(cur.code)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
                 }
 
                 if let settingsError {
                     Section {
-                        Text(settingsError)
-                            .font(.caption)
-                            .foregroundStyle(BrandTheme.alert)
+                        NoticeBanner(
+                            text: settingsError,
+                            systemImage: "exclamationmark.triangle.fill",
+                            tone: .critical
+                        )
+                        .listRowBackground(Color.clear)
                     }
                 }
 
                 if let sharingStatus {
                     Section {
-                        Text(sharingStatus)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        NoticeBanner(
+                            text: sharingStatus,
+                            systemImage: "checkmark.shield.fill",
+                            tone: .success
+                        )
+                        .listRowBackground(Color.clear)
                     }
                 }
 
@@ -185,8 +161,6 @@ struct SettingsView: View {
                         }
                     }
                 }
-
-                brandSection
 
                 // MARK: Export
                 Section(L10n.tr("settings.export")) {
@@ -203,12 +177,12 @@ struct SettingsView: View {
                     HStack {
                         Text(L10n.tr("settings.version"))
                         Spacer()
-                        Text("1.0.0").foregroundStyle(.secondary)
+                        Text("1.0.0").foregroundStyle(BrandTheme.textSecondary)
                     }
                     HStack {
                         Text(L10n.tr("settings.build"))
                         Spacer()
-                        Text("1").foregroundStyle(.secondary)
+                        Text("1").foregroundStyle(BrandTheme.textSecondary)
                     }
                     NavigationLink(L10n.tr("settings.privacy_policy")) {
                         PrivacyPolicyView()
@@ -231,14 +205,8 @@ struct SettingsView: View {
             }
             .onAppear {
                 defaultCurrencyCode = config.defaultCurrencyCode
-                selectedBrandAppearance = config.brandAppearance
                 Task {
                     await auth.refreshUserContext()
-                }
-            }
-            .onChange(of: selectedBrandAppearance) { _, newAppearance in
-                Task {
-                    await config.setBrandAppearance(newAppearance)
                 }
             }
             .onChange(of: defaultCurrencyCode) { _, newCode in
@@ -266,76 +234,6 @@ struct SettingsView: View {
     private func exportAll() {
         pdfData = PDFGenerator.generateAll(items: items)
         showShareSheet = true
-    }
-
-    private var brandSection: some View {
-        Section {
-            Picker("Theme variant", selection: $selectedBrandAppearance) {
-                ForEach(BrandAppearance.allCases) { appearance in
-                    Text(appearance.title)
-                        .tag(appearance)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            ForEach(BrandAppearance.allCases) { appearance in
-                brandOptionRow(for: appearance)
-            }
-        } header: {
-            Text("Brand")
-        } footer: {
-            Text("Brand appearance updates the app colours, splash experience, login screen, and app icon.")
-        }
-    }
-
-    private func brandOptionRow(for appearance: BrandAppearance) -> some View {
-        let palette = appearance.palette
-        let isActive = appearance == config.brandAppearance
-
-        return Button {
-            selectedBrandAppearance = appearance
-            Task {
-                await config.setBrandAppearance(appearance)
-            }
-        } label: {
-            HStack(spacing: 14) {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                palette.backgroundTop,
-                                palette.accentBright,
-                                palette.accentCool
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 54, height: 54)
-                    .overlay(
-                        Image(systemName: isActive ? "checkmark" : "sparkles")
-                            .font(.headline.weight(.bold))
-                            .foregroundStyle(palette.actionForeground)
-                    )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(appearance.title)
-                        .foregroundStyle(BrandTheme.textPrimary)
-                    Text(appearance.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                if isActive {
-                    Text("Active")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BrandTheme.accent)
-                }
-            }
-        }
-        .buttonStyle(.plain)
     }
 
     private var sharedAccessEntries: [SharedAccessEntry] {
@@ -388,7 +286,7 @@ struct SettingsView: View {
                 currentProfile: auth.currentUserProfile
             )
             inviteEmail = ""
-            sharingStatus = "Invite sent to \(invitedEmail)."
+            sharingStatus = L10n.format("Invite sent to %@.", invitedEmail)
             await auth.refreshUserContext()
         } catch {
             settingsError = error.localizedDescription
@@ -413,7 +311,7 @@ struct SettingsView: View {
 
             await auth.refreshUserContext()
             await onInventoryChanged()
-            sharingStatus = "You are now sharing the family inventory."
+            sharingStatus = L10n.tr("You are now sharing the family inventory.")
         } catch {
             settingsError = error.localizedDescription
         }
@@ -437,7 +335,7 @@ struct SettingsView: View {
 
             await auth.refreshUserContext()
             await onInventoryChanged()
-            sharingStatus = "Access removed for \(entry.email)."
+            sharingStatus = L10n.format("Access removed for %@.", entry.email)
         } catch {
             settingsError = error.localizedDescription
         }
@@ -458,9 +356,9 @@ private struct SharedAccessEntry: Identifiable {
         var title: String {
             switch self {
             case .accepted:
-                return "Accepted"
+                return L10n.tr("Accepted")
             case .pending:
-                return "Pending"
+                return L10n.tr("Pending")
             }
         }
 

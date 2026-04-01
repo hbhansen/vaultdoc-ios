@@ -219,12 +219,12 @@ enum AnthropicError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey: return "Anthropic API key is missing from app configuration."
-        case .missingPhotos: return "Add at least one photo to calculate a valuation."
-        case .apiError: return "API request failed."
-        case .parseError: return "Could not parse AI response."
-        case .unsupportedImageFormat: return "Only JPG, PNG, GIF, and WebP images can be analyzed."
-        case .unsupportedSubject: return "Valuation is only available for non-living objects."
+        case .missingAPIKey: return L10n.tr("anthropic.error.missing_api_key")
+        case .missingPhotos: return L10n.tr("valuation.error.missing_photos")
+        case .apiError: return L10n.tr("valuation.error.api_request_failed")
+        case .parseError: return L10n.tr("valuation.error.parse_failed")
+        case .unsupportedImageFormat: return L10n.tr("valuation.error.unsupported_image_format")
+        case .unsupportedSubject: return L10n.tr("valuation.error.unsupported_subject")
         }
     }
 }

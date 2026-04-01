@@ -119,7 +119,7 @@ class AuthService {
                 await refreshUserContext()
             case .confirmationRequired:
                 authScreen = .signIn
-                infoMessage = "Check your email to confirm your account before signing in."
+                infoMessage = L10n.tr("auth.info.confirm_email")
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -171,13 +171,13 @@ class AuthService {
     }
 
     func recordIncomingURL(_ url: URL) {
-        debugMessage = "Received link: \(url.absoluteString)"
+        debugMessage = L10n.format("auth.debug.received_link", url.absoluteString)
     }
 
     func requestPasswordReset(email: String) async {
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalizedEmail.isEmpty else {
-            errorMessage = "Enter your email to reset your password."
+            errorMessage = L10n.tr("auth.error.enter_email_for_reset")
             infoMessage = nil
             return
         }
@@ -194,12 +194,12 @@ class AuthService {
             // Always show a generic success state so the flow never reveals account existence.
         }
 
-        infoMessage = "If an account exists for that email, a password reset link has been sent."
+        infoMessage = L10n.tr("auth.info.password_reset_sent")
     }
 
     func handleIncomingURL(_ url: URL) async {
         guard SupabaseAuthService.isPasswordResetURL(url) else {
-            debugMessage = "Ignored non-reset link: \(url.absoluteString)"
+            debugMessage = L10n.format("auth.debug.ignored_link", url.absoluteString)
             return
         }
 
@@ -209,12 +209,12 @@ class AuthService {
         didCompletePasswordReset = false
         pendingPasswordRecoveryURL = url
         authScreen = .resetPasswordLanding
-        debugMessage = "Recovery link received. Continue to reset your password."
+        debugMessage = L10n.tr("auth.debug.recovery_link_received")
     }
 
     func beginPasswordRecovery() async {
         guard let recoveryURL = pendingPasswordRecoveryURL else {
-            errorMessage = "This password reset link is missing required information."
+            errorMessage = L10n.tr("auth.error.reset_link_missing_info")
             authScreen = .signIn
             isPasswordRecoveryActive = false
             return
@@ -223,7 +223,7 @@ class AuthService {
         isLoading = true
         errorMessage = nil
         infoMessage = nil
-        debugMessage = "Handling reset link…"
+        debugMessage = L10n.tr("auth.debug.handling_reset_link")
         defer { isLoading = false }
 
         do {
@@ -233,12 +233,15 @@ class AuthService {
             didCompletePasswordReset = false
             pendingPasswordRecoveryURL = nil
             authScreen = .resetPassword
-            debugMessage = "Recovery session established for \(session.userEmail.isEmpty ? session.userId : session.userEmail)."
+            debugMessage = L10n.format(
+                "auth.debug.recovery_session_established",
+                session.userEmail.isEmpty ? session.userId : session.userEmail
+            )
             await refreshUserContext()
         } catch {
             errorMessage = error.localizedDescription
             authScreen = .resetPasswordLanding
-            debugMessage = "Reset link handling failed: \(error.localizedDescription)"
+            debugMessage = L10n.format("auth.debug.reset_link_failed", error.localizedDescription)
         }
     }
 
@@ -247,17 +250,17 @@ class AuthService {
         let normalizedConfirmation = confirmPassword.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !normalizedPassword.isEmpty, !normalizedConfirmation.isEmpty else {
-            errorMessage = "Enter and confirm your new password."
+            errorMessage = L10n.tr("auth.error.enter_and_confirm_password")
             return
         }
 
         guard normalizedPassword.count >= minimumPasswordLength else {
-            errorMessage = "Use at least \(minimumPasswordLength) characters for your new password."
+            errorMessage = L10n.format("auth.error.minimum_new_password", Int64(minimumPasswordLength))
             return
         }
 
         guard normalizedPassword == normalizedConfirmation else {
-            errorMessage = "Passwords do not match."
+            errorMessage = L10n.tr("auth.error.passwords_do_not_match")
             return
         }
 
@@ -392,9 +395,7 @@ class AuthService {
     private func postJSON<T: Decodable>(url: URL, body: [String: String]) async throws -> T {
         let anonKey = Config.Supabase.anonKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !anonKey.isEmpty else {
-            throw AuthError.serverError(
-                "Missing Supabase configuration. Add SUPABASE_ANON_KEY to the scheme environment or Secrets.plist."
-            )
+            throw AuthError.serverError(L10n.tr("supabase.error.missing_configuration"))
         }
 
         var request = URLRequest(url: url)

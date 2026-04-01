@@ -41,15 +41,6 @@ struct VaultListView: View {
                             .foregroundStyle(BrandTheme.accentBright)
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAddItem = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(BrandTheme.accentBright)
-                    }
-                }
             }
             .sheet(isPresented: $showAddItem) {
                 AddItemView()
@@ -72,6 +63,11 @@ struct VaultListView: View {
             .task(id: auth.effectiveInventoryId) {
                 guard auth.isAuthenticated else { return }
                 await syncFromSupabase()
+            }
+            .safeAreaInset(edge: .bottom) {
+                bottomAction
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
             }
             .brandBackground()
         }
@@ -158,237 +154,132 @@ struct VaultListView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "archivebox")
-                .font(.system(size: 72))
-                .foregroundStyle(BrandTheme.accentGradient)
-            Text(L10n.tr("vault.empty_title"))
-                .font(.system(.title2, design: .serif, weight: .bold))
-                .foregroundStyle(BrandTheme.textPrimary)
-            Text(L10n.tr("vault.empty_message"))
-                .font(.subheadline)
-                .foregroundStyle(BrandTheme.textSecondary)
-                .multilineTextAlignment(.center)
-            Button {
-                showAddItem = true
-            } label: {
-                Label(L10n.tr("vault.add_first_item"), systemImage: "plus")
-                    .font(.headline)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(BrandTheme.accentGradient)
-                    .foregroundStyle(BrandTheme.actionForeground)
-                    .clipShape(Capsule())
+        VStack(spacing: 18) {
+            Spacer()
+
+            SectionCard(
+                title: L10n.tr("vault.empty_title"),
+                subtitle: L10n.tr("vault.empty_message")
+            ) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Label(L10n.tr("Stored securely"), systemImage: "lock.shield")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(BrandTheme.textSecondary)
+
+                    Label(L10n.tr("Add the first object to start documenting ownership."), systemImage: "plus.circle")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(BrandTheme.textSecondary)
+                }
             }
-            .padding(.top, 8)
+            .padding(.horizontal, 20)
+
+            Spacer()
         }
-        .padding()
-        .brandCard()
-        .padding()
     }
 
     private var listContent: some View {
-        List {
-            vaultHero
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                summarySection
 
-            if !visibleItems.isEmpty {
-                Section {
-                    ForEach(filtered) { item in
-                        NavigationLink(destination: ItemDetailView(item: item)) {
-                            ItemRow(item: item)
-                        }
-                        .listRowBackground(Color.clear)
-                    }
-                    .onDelete { offsets in
-                        let sourceItems = filtered
-                        let itemsToDelete = offsets.map { sourceItems[$0] }
-                        Task {
-                            for item in itemsToDelete {
-                                do {
-                                    // Collect storage paths to delete files
-                                    let filePaths = item.photos.map(\.storagePath) + item.documents.map(\.storagePath)
-                                    let nonEmpty = filePaths.filter { !$0.isEmpty }
-                                    if !nonEmpty.isEmpty {
-                                        try? await SupabaseDataService.deleteFiles(paths: nonEmpty)
+                if filtered.isEmpty {
+                    SectionCard(
+                        title: L10n.tr("No matching items"),
+                        subtitle: L10n.tr("Try a different search term.")
+                    ) {}
+                } else {
+                    LazyVStack(spacing: 12) {
+                        ForEach(filtered) { item in
+                            NavigationLink(destination: ItemDetailView(item: item)) {
+                                VaultItemRow(
+                                    item: item,
+                                    valueText: CurrencyFormatter.format(item.valuationAmount, for: item, config: config)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    Task {
+                                        await delete(item: item)
                                     }
-                                    // Delete item from Supabase (cascades photos/docs records)
-                                    try await SupabaseDataService.deleteItem(id: item.id)
-                                    // Delete locally
-                                    modelContext.delete(item)
-                                } catch {
-                                    deleteError = error.localizedDescription
+                                } label: {
+                                    Label(L10n.tr("Delete"), systemImage: "trash")
                                 }
                             }
                         }
                     }
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 100)
         }
-        .scrollContentBackground(.hidden)
-        .listStyle(.plain)
         .searchable(text: $viewModel.searchText, prompt: L10n.tr("vault.search_prompt"))
-        .background(Color.clear)
     }
 
-    private var vaultHero: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Collection overview")
-                    .font(.caption.weight(.bold))
-                    .textCase(.uppercase)
-                    .foregroundStyle(BrandTheme.textSecondary)
-                    .tracking(1.2)
-                Text("A brighter read on what your vault is worth")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(BrandTheme.textPrimary)
-            }
+    private var summarySection: some View {
+        SectionCard(
+            title: L10n.tr("Overview"),
+            subtitle: L10n.tr("Your records are stored securely and ready when needed.")
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 12) {
+                    ValueBadge(
+                        title: L10n.tr("vault.stat.items"),
+                        value: "\(visibleItems.count)"
+                    )
+                    ValueBadge(
+                        title: L10n.tr("vault.stat.documented"),
+                        value: "\(viewModel.documentedCount(visibleItems))/\(visibleItems.count)",
+                        tone: .positive
+                    )
+                }
 
-            HStack(spacing: 12) {
-                StatCard(
-                    title: L10n.tr("vault.stat.items"),
-                    value: "\(visibleItems.count)",
-                    icon: "archivebox.fill",
-                    gradient: BrandTheme.sunburstGradient
-                )
-                StatCard(
+                ValueBadge(
                     title: L10n.tr("vault.stat.total_value"),
                     value: CurrencyFormatter.format(
                         viewModel.totalDeclaredValue(visibleItems),
                         code: config.defaultCurrencyCode,
                         symbol: config.currency(code: config.defaultCurrencyCode)?.symbol
-                    ),
-                    icon: "eurosign.circle.fill",
-                    gradient: BrandTheme.coolAccentGradient
-                )
-                StatCard(
-                    title: L10n.tr("vault.stat.documented"),
-                    value: "\(viewModel.documentedCount(visibleItems))/\(visibleItems.count)",
-                    icon: "checkmark.seal.fill",
-                    gradient: BrandTheme.accentGradient
-                )
-            }
-        }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [BrandTheme.elevatedSurface, BrandTheme.surface],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
                     )
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                )
-        )
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
-    }
-}
 
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let gradient: LinearGradient
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(BrandTheme.actionForeground)
-                .font(.headline)
-                .frame(width: 32, height: 32)
-                .background(BrandTheme.accent.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            Text(value)
-                .font(.system(size: 15, weight: .black, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .foregroundStyle(BrandTheme.actionForeground)
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(BrandTheme.actionForeground.opacity(0.78))
-                .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .frame(minHeight: 110)
-        .background(gradient, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-}
-
-struct ItemRow: View {
-    @Environment(AppConfigStore.self) private var config
-
-    let item: Item
-
-    var body: some View {
-        HStack(spacing: 12) {
-            if let photo = item.photos.first {
-                CachedDataImage(data: photo.imageData, cacheKey: photo.id.uuidString, maxDimension: 48)
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            } else {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [BrandTheme.elevatedSurface, BrandTheme.surface],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                HStack(spacing: 8) {
+                    StatusBadge(
+                        title: isSyncing ? L10n.tr("Syncing") : L10n.tr("Encrypted"),
+                        systemImage: isSyncing ? "arrow.triangle.2.circlepath" : "lock.shield",
+                        tone: isSyncing ? .warning : .neutral
                     )
-                    .frame(width: 56, height: 56)
-                    .overlay {
-                        Image(systemName: item.categoryIcon)
-                            .foregroundStyle(BrandTheme.sunburstGradient)
-                    }
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.name)
-                    .font(.headline)
-                    .lineLimit(1)
-                HStack(spacing: 6) {
-                    CategoryBadge(category: item.category)
-                    Text(CurrencyFormatter.format(item.estimatedValue, for: item, config: config))
-                        .font(.subheadline)
-                        .foregroundStyle(BrandTheme.textSecondary)
+                    StatusBadge(
+                        title: auth.isAuthenticated ? L10n.tr("Secure access") : L10n.tr("Offline"),
+                        systemImage: auth.isAuthenticated ? "checkmark.shield" : "wifi.slash",
+                        tone: auth.isAuthenticated ? .positive : .warning
+                    )
                 }
             }
-
-            Spacer()
-
-            Circle()
-                .fill(item.isDocumented ? Color.green : Color.orange)
-                .frame(width: 8, height: 8)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(BrandTheme.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(BrandTheme.border, lineWidth: 1)
-                )
-        )
     }
-}
 
-struct CategoryBadge: View {
-    let category: String
+    private var bottomAction: some View {
+        Button {
+            showAddItem = true
+        } label: {
+            Label(visibleItems.isEmpty ? L10n.tr("vault.add_first_item") : L10n.tr("Add object"), systemImage: "plus")
+        }
+        .buttonStyle(PrimaryActionButtonStyle())
+    }
 
-    var body: some View {
-        Text(L10n.categoryName(category))
-            .font(.caption2).bold()
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(BrandTheme.elevatedSurface)
-            .foregroundStyle(BrandTheme.accentBright)
-            .clipShape(Capsule())
+    private func delete(item: Item) async {
+        do {
+            let filePaths = item.photos.map(\.storagePath) + item.documents.map(\.storagePath)
+            let nonEmpty = filePaths.filter { !$0.isEmpty }
+            if !nonEmpty.isEmpty {
+                try? await SupabaseDataService.deleteFiles(paths: nonEmpty)
+            }
+            try await SupabaseDataService.deleteItem(id: item.id)
+            modelContext.delete(item)
+        } catch {
+            deleteError = error.localizedDescription
+        }
     }
 }

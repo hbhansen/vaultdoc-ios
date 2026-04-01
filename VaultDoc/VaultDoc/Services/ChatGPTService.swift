@@ -355,17 +355,17 @@ enum ChatGPTError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            return "OpenAI API key is missing from app configuration."
+            return L10n.tr("openai.error.missing_api_key")
         case .missingPhotos:
-            return "Add at least one photo to calculate a valuation."
+            return L10n.tr("valuation.error.missing_photos")
         case .invalidResponse:
-            return "The ChatGPT service returned an invalid response."
+            return L10n.tr("openai.error.invalid_response")
         case .apiError(let statusCode):
-            return "OpenAI API request failed with status code \(statusCode)."
+            return L10n.format("openai.error.api_status", Int64(statusCode))
         case .parseError:
-            return "Could not parse ChatGPT response."
+            return L10n.tr("valuation.error.parse_failed")
         case .unsupportedSubject:
-            return "Valuation is only available for non-living objects."
+            return L10n.tr("valuation.error.unsupported_subject")
         }
     }
 }
