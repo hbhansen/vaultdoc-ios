@@ -107,12 +107,20 @@ class AuthService {
         }
 
         do {
-            let url = URL(string: "\(Config.Supabase.url)/auth/v1/signup")!
-            let body = ["email": normalizedEmail, "password": normalizedPassword]
-            let response: AuthResponse = try await postJSON(url: url, body: body)
-            handleAuthResponse(response)
-            authScreen = .signIn
-            await refreshUserContext()
+            let result = try await SupabaseAuthService.signUp(
+                email: normalizedEmail,
+                password: normalizedPassword
+            )
+
+            switch result {
+            case .authenticated(let session):
+                applyRecoveredSession(session)
+                authScreen = .signIn
+                await refreshUserContext()
+            case .confirmationRequired:
+                authScreen = .signIn
+                infoMessage = "Check your email to confirm your account before signing in."
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -382,9 +390,16 @@ class AuthService {
     }
 
     private func postJSON<T: Decodable>(url: URL, body: [String: String]) async throws -> T {
+        let anonKey = Config.Supabase.anonKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !anonKey.isEmpty else {
+            throw AuthError.serverError(
+                "Missing Supabase configuration. Add SUPABASE_ANON_KEY to the scheme environment or Secrets.plist."
+            )
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(Config.Supabase.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)

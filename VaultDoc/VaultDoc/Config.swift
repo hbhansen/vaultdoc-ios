@@ -11,7 +11,7 @@ enum Config {
     }
 
     enum PasswordReset {
-        static let webRedirectURL = "https://vaultdoc.chatoyant.ventures"
+        static let webRedirectURL = "https://vaultdoc.chatoyant.ventures/reset-password"
         static let appRedirectURL = "vaultdoc://reset-password"
     }
 

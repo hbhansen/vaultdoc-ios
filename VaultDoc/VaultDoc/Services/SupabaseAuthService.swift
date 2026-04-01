@@ -1,6 +1,11 @@
 import Foundation
 import Supabase
 
+enum SignUpResult {
+    case authenticated(PasswordRecoverySession)
+    case confirmationRequired(email: String)
+}
+
 struct PasswordRecoverySession {
     let accessToken: String
     let refreshToken: String
@@ -13,13 +18,19 @@ enum SupabaseAuthService {
     private static let appRedirectURL = URL(string: Config.PasswordReset.appRedirectURL)
 
     private static var client: SupabaseClient? {
-        guard let url = URL(string: Config.Supabase.url) else {
+        guard
+            let url = URL(string: Config.Supabase.url),
+            !Config.Supabase.anonKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
             return nil
         }
 
         return SupabaseClient(
             supabaseURL: url,
-            supabaseKey: Config.Supabase.anonKey
+            supabaseKey: Config.Supabase.anonKey,
+            options: SupabaseClientOptions(
+                auth: .init(emitLocalSessionAsInitialSession: true)
+            )
         )
     }
 
@@ -36,7 +47,34 @@ enum SupabaseAuthService {
         let expectedPath = appRedirectURL.path.lowercased()
         let host = url.host?.lowercased()
         let path = url.path.lowercased()
-        return host == expectedHost || path == expectedPath
+        let hostMatches = expectedHost == nil || host == expectedHost
+        let pathMatches = expectedPath.isEmpty || path == expectedPath
+        return hostMatches && pathMatches
+    }
+
+    static func signUp(email: String, password: String) async throws -> SignUpResult {
+        guard let client else {
+            throw PasswordResetError.invalidConfiguration
+        }
+
+        let response = try await client.auth.signUp(
+            email: email,
+            password: password
+        )
+
+        switch response {
+        case .session(let session):
+            return .authenticated(
+                PasswordRecoverySession(
+                    accessToken: session.accessToken,
+                    refreshToken: session.refreshToken,
+                    userId: session.user.id.uuidString,
+                    userEmail: session.user.email ?? email
+                )
+            )
+        case .user(let user):
+            return .confirmationRequired(email: user.email ?? email)
+        }
     }
 
     static func requestPasswordReset(email: String) async throws {
@@ -46,7 +84,7 @@ enum SupabaseAuthService {
 
         try await client.auth.resetPasswordForEmail(
             email,
-            redirectTo: passwordResetWebRedirectURL
+            redirectTo: appRedirectURL ?? passwordResetWebRedirectURL
         )
     }
 
@@ -93,6 +131,20 @@ enum SupabaseAuthService {
                 userId: session.user.id.uuidString,
                 userEmail: session.user.email ?? ""
             )
+
+        case .authCode(let code, let type):
+            if let type, type != "recovery" {
+                throw PasswordResetError.invalidRecoveryType
+            }
+
+            let session = try await client.auth.exchangeCodeForSession(authCode: code)
+
+            return PasswordRecoverySession(
+                accessToken: session.accessToken,
+                refreshToken: session.refreshToken,
+                userId: session.user.id.uuidString,
+                userEmail: session.user.email ?? ""
+            )
         }
     }
 
@@ -108,6 +160,7 @@ enum SupabaseAuthService {
 private enum PasswordRecoveryCallback {
     case session(accessToken: String, refreshToken: String, type: String)
     case tokenHash(tokenHash: String, type: String)
+    case authCode(code: String, type: String?)
 
     init(url: URL) throws {
         let parameters = Self.parameters(from: url)
@@ -137,6 +190,14 @@ private enum PasswordRecoveryCallback {
             self = .tokenHash(
                 tokenHash: tokenHash,
                 type: type.lowercased()
+            )
+            return
+        }
+
+        if let code = parameters["code"], !code.isEmpty {
+            self = .authCode(
+                code: code,
+                type: parameters["type"]?.lowercased()
             )
             return
         }
@@ -186,7 +247,7 @@ enum PasswordResetError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidConfiguration:
-            return "Password reset is not configured correctly."
+            return "Missing Supabase configuration. Add SUPABASE_ANON_KEY to the scheme environment or Secrets.plist."
         case .malformedRecoveryLink:
             return "This password reset link is invalid or incomplete."
         case .invalidRecoveryType:
