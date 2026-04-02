@@ -244,20 +244,39 @@ struct VaultListView: View {
                     )
                 )
 
-                HStack(spacing: 8) {
-                    StatusBadge(
-                        title: isSyncing ? L10n.tr("Syncing") : L10n.tr("Encrypted"),
-                        systemImage: isSyncing ? "arrow.triangle.2.circlepath" : "lock.shield",
-                        tone: isSyncing ? .warning : .neutral
-                    )
-                    StatusBadge(
-                        title: auth.isAuthenticated ? L10n.tr("Secure access") : L10n.tr("Offline"),
-                        systemImage: auth.isAuthenticated ? "checkmark.shield" : "wifi.slash",
-                        tone: auth.isAuthenticated ? .positive : .warning
-                    )
-                }
+                summaryStatusRow
             }
         }
+    }
+
+    private var summaryStatusRow: some View {
+        HStack(spacing: 10) {
+            Label(
+                isSyncing ? L10n.tr("Syncing") : L10n.tr("Encrypted"),
+                systemImage: isSyncing ? "arrow.triangle.2.circlepath" : "lock.shield"
+            )
+
+            Text(L10n.tr("•"))
+                .foregroundStyle(BrandTheme.textSecondary)
+
+            Label(
+                auth.isAuthenticated ? L10n.tr("Secure access") : L10n.tr("Offline"),
+                systemImage: auth.isAuthenticated ? "checkmark.shield" : "wifi.slash"
+            )
+        }
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundStyle(BrandTheme.textSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(BrandTheme.surfaceElevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(BrandTheme.border, lineWidth: 1)
+                )
+        )
     }
 
     private var bottomAction: some View {
